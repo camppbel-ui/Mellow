@@ -7,24 +7,28 @@
       powershell -ExecutionPolicy Bypass -File .\install\build-apps.ps1
 
   Writes, beside dist\Mellow.zip:
-    Mellow-Windows.zip   Mellow.exe, Node.js, and Mellow's code. Double-clicking
-                         Mellow installs it to %LOCALAPPDATA%\Mellow with a desktop
-                         and Start menu icon, and runs it from the notification area.
+    Mellow-Setup.exe     the Windows download: one file that installs Mellow to
+                         %LOCALAPPDATA%\Mellow, with a desktop and Start menu icon and
+                         an uninstall entry, and opens it in its own window.
+    Mellow-Windows.zip   the same app unzipped by hand, for when a browser or antivirus
+                         won't let an installer through. Mellow-Setup.exe carries it.
     Mellow-Mac.zip       Mellow.app, with Node.js for Apple silicon and Intel. It
                          installs itself to ~/Library/Application Support/Mellow.
 
-  Neither needs Node.js installed. Both run the same code as Mellow.zip, and
+  None needs Node.js installed. All run the same code as Mellow.zip, and
   Mellow.zip stays what every copy's updater downloads, so friends download an
-  app once and updates arrive in it after that. Attach all three to the release.
+  app once and updates arrive in it after that. Attach all four to the release.
 
-  Node.js comes from nodejs.org, pinned to the version below, checked against
-  its published SHA-256 sums, and kept in dist\node-cache so it downloads once.
+  Node.js comes from nodejs.org and the WebView2 SDK (the Windows window) from
+  nuget.org, each pinned to the version below, checked against its published
+  hash, and kept in dist\ so it downloads once.
 
       -OutDir <path>        where Mellow.zip is and the apps go (default: dist\)
       -NodeVersion <v>      like v24.21.0 (default below; change it on purpose)
+      -WebView2Version <v>  like 1.0.4191.47 (default below; change it on purpose)
 #>
 
-param([string]$OutDir, [string]$NodeVersion = 'v24.21.0')
+param([string]$OutDir, [string]$NodeVersion = 'v24.21.0', [string]$WebView2Version = '1.0.4191.47')
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'   # Invoke-WebRequest is many times slower drawing its progress bar
@@ -87,12 +91,39 @@ try {
         Move-Item (Join-Path $rt ($inner.Replace('/', '\'))) (Join-Path $rt "node-$($a.arch)")
     }
 
+    # --- WebView2, for Mellow's own window on Windows ----------------------------------
+    $wvCache = Join-Path $OutDir "webview2-cache\$WebView2Version"
+    New-Item -ItemType Directory -Path $wvCache -Force | Out-Null
+    $nupkg = Join-Path $wvCache "microsoft.web.webview2.$WebView2Version.nupkg"
+    $catalog = Invoke-RestMethod (Invoke-RestMethod "https://api.nuget.org/v3/registration5-semver1/microsoft.web.webview2/$WebView2Version.json").catalogEntry
+    if ($catalog.packageHashAlgorithm -ne 'SHA512') { throw "nuget.org gave no SHA512 for WebView2 $WebView2Version." }
+    $hashOf = { param($f) [Convert]::ToBase64String([Security.Cryptography.SHA512]::Create().ComputeHash([IO.File]::ReadAllBytes($f))) }
+    if (-not ((Test-Path $nupkg) -and (& $hashOf $nupkg) -eq $catalog.packageHash)) {
+        Write-Host "  downloading WebView2 SDK $WebView2Version"
+        Invoke-WebRequest "https://api.nuget.org/v3-flatcontainer/microsoft.web.webview2/$WebView2Version/microsoft.web.webview2.$WebView2Version.nupkg" -OutFile "$nupkg.part" -UseBasicParsing
+        if ((& $hashOf "$nupkg.part") -ne $catalog.packageHash) { Remove-Item "$nupkg.part" -Force; throw "The WebView2 SDK didn't match nuget.org's hash, so it wasn't used." }
+        Move-Item "$nupkg.part" $nupkg -Force
+    }
+    $wv = Join-Path $work 'webview2'
+    New-Item -ItemType Directory -Path $wv -Force | Out-Null
+    $pkg = [System.IO.Compression.ZipFile]::OpenRead($nupkg)
+    try {
+        foreach ($inner in @('lib/net462/Microsoft.Web.WebView2.Core.dll', 'lib/net462/Microsoft.Web.WebView2.WinForms.dll', 'runtimes/win-x64/native/WebView2Loader.dll')) {
+            $entry = $pkg.Entries | Where-Object { $_.FullName -eq $inner }
+            if (-not $entry) { throw "$inner isn't in the WebView2 SDK." }
+            [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, (Join-Path $wv (Split-Path -Leaf $inner)), $true)
+        }
+    } finally { $pkg.Dispose() }
+    $sideFiles = Get-ChildItem $wv -File
+
     # --- Mellow.exe --------------------------------------------------------------------
     $csc = "$env:SystemRoot\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
     if (-not (Test-Path $csc)) { throw "The C# compiler that comes with Windows isn't at $csc." }
+    $source = Join-Path $here 'app\windows\Mellow.cs'
+    $common = @('/nologo', '/target:winexe', '/optimize+', '/nowarn:0169,0414,0649', "/win32icon:$(Join-Path $root 'ratchet.ico')",
+                "/win32manifest:$(Join-Path $here 'app\windows\app.manifest')", '/reference:System.Windows.Forms.dll', '/reference:System.Drawing.dll')
     $exe = Join-Path $work 'Mellow.exe'
-    $out = & $csc /nologo /target:winexe /optimize+ "/win32icon:$(Join-Path $root 'ratchet.ico')" "/out:$exe" `
-        /reference:System.Windows.Forms.dll /reference:System.Drawing.dll (Join-Path $here 'app\windows\Mellow.cs')
+    $out = & $csc @common "/out:$exe" "/reference:$(Join-Path $wv 'Microsoft.Web.WebView2.Core.dll')" "/reference:$(Join-Path $wv 'Microsoft.Web.WebView2.WinForms.dll')" $source
     if ($LASTEXITCODE -ne 0) { $out | ForEach-Object { Write-Host $_ }; throw "Mellow.exe didn't compile." }
 
     # --- Mellow-Windows.zip --------------------------------------------------------------
@@ -100,8 +131,9 @@ try {
     [System.IO.File]::WriteAllText($readme, (@"
 Mellow $version for Windows
 
-Double-click Mellow to install it. It puts Mellow on your desktop and in the
-Start menu and opens it in its own window. Nothing else to install.
+This is the unzipped version of Mellow-Setup.exe, for when an installer won't
+download. Double-click Mellow to install it. It puts Mellow on your desktop and
+in the Start menu and opens it in its own window. Nothing else to install.
 
 If Windows says it protected your PC, click More info, then Run anyway.
 
@@ -110,7 +142,7 @@ when a new version is out, Update now appears in its sidebar.
 
 While Mellow runs, its icon sits by the clock (click the ^ arrow if you don't
 see it). Click it to open Mellow; right-click it to quit or to start Mellow
-when you sign in.
+when you sign in. To remove Mellow: Settings, Apps, Mellow, Uninstall.
 
 https://mellow-track.com
 "@).Replace("`r`n", "`n").Replace("`n", "`r`n"), (New-Object System.Text.UTF8Encoding $false))
@@ -119,9 +151,14 @@ https://mellow-track.com
         @{ Name = 'Mellow/Mellow.exe'; File = $exe },
         @{ Name = 'Mellow/Read me.txt'; File = $readme },
         @{ Name = 'Mellow/runtime/node.exe'; File = (Join-Path $rt 'node.exe') }
-    ) + @(Get-ZipEntries -Dir $code -Prefix 'Mellow/app')
+    ) + @($sideFiles | ForEach-Object { @{ Name = "Mellow/$($_.Name)"; File = $_.FullName } }) + @(Get-ZipEntries -Dir $code -Prefix 'Mellow/app')
     $winZip = Join-Path $OutDir 'Mellow-Windows.zip'
     Write-UnixZip -Path $winZip -Entries $winEntries
+
+    # --- Mellow-Setup.exe: the same, as one file that installs itself -----------------------
+    $setup = Join-Path $OutDir 'Mellow-Setup.exe'
+    $out = & $csc @common /define:SETUP "/out:$setup" /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll "/resource:$winZip,payload.zip" $source
+    if ($LASTEXITCODE -ne 0) { $out | ForEach-Object { Write-Host $_ }; throw "Mellow-Setup.exe didn't compile." }
 
     # --- Mellow.app ----------------------------------------------------------------------
     $mac = Join-Path $work 'mac'
@@ -171,10 +208,10 @@ https://mellow-track.com
     $macZip = Join-Path $OutDir 'Mellow-Mac.zip'
     Write-UnixZip -Path $macZip -Entries $macEntries
 
-    foreach ($z in @($winZip, $macZip)) {
+    foreach ($z in @($setup, $winZip, $macZip)) {
         Write-Host ("Built {0} ({1} MB)" -f (Split-Path -Leaf $z), [math]::Round((Get-Item $z).Length / 1MB, 1)) -ForegroundColor Green
     }
-    Write-Host "Node.js $NodeVersion inside. Attach both, and Mellow.zip, to the release under exactly these names."
+    Write-Host "Node.js $NodeVersion and WebView2 $WebView2Version inside. Attach these, and Mellow.zip, to the release under exactly these names."
 } finally {
     Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
 }

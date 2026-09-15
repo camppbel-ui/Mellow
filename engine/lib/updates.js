@@ -158,7 +158,7 @@ function keepExisting(rel) {
 const NEVER = [/^engine\/(assistant|drops|google-cache|news-cache|calendar-cache|art)\//, /^engine\/ai-key\.txt$/, /client_secret/i, /^engine\/google-tokens\.json$/,
   /^engine\/google-accounts\.json$/, /\.log$/, /^dist\//, /^notify-queue\//, /^\.git\//,
   // The Windows and Mac apps' own launcher and the Node.js they bring: running while an update installs, and not part of a release.
-  /^runtime\//, /^Mellow\.exe$/i];
+  /^runtime\//, /^Mellow\.exe$/i, /^(Microsoft\.Web\.WebView2\.[\w.]+|WebView2Loader)\.dll$/i, /^\.webview\//];
 // A launcher can be running while it is replaced, so it is written beside itself and swapped in at the next start.
 const LAUNCHERS = new Set(['start-ratchet.cmd', 'start-ratchet.command']);
 

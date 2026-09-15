@@ -14,10 +14,10 @@
        mellow-track.com. Your data never goes in: only what the package has.
     3. Builds the Windows and Mac apps (install\build-apps.ps1) from that package.
     4. Writes RELEASE-NOTES.txt with the tag to use, and leaves Mellow.zip,
-       Mellow-Windows.zip and Mellow-Mac.zip in dist\ to attach to the release.
+       Mellow-Setup.exe, Mellow-Windows.zip and Mellow-Mac.zip in dist\ to attach.
 
   Then you commit and push (GitHub Desktop), and publish a release with all
-  three attached. Every friend's Mellow sees it within a few hours.
+  four attached. Every friend's Mellow sees it within a few hours.
 
       -Version <v>     like 2026.09.20; default today's date
       -RepoDir <path>  your clone of the repo (default: D:\Assistant Tool\mellow-repo)
@@ -51,6 +51,7 @@ $zip = Join-Path $dist 'Mellow.zip'
 # The Windows and Mac apps friends download, built from that same package.
 & powershell -ExecutionPolicy Bypass -File (Join-Path $here 'build-apps.ps1') -OutDir $dist
 if ($LASTEXITCODE -ne 0) { Write-Host "The apps weren't built, so nothing else was done." -ForegroundColor Red; exit 1 }
+$setupExe = Join-Path $dist 'Mellow-Setup.exe'
 $winZip = Join-Path $dist 'Mellow-Windows.zip'
 $macZip = Join-Path $dist 'Mellow-Mac.zip'
 
@@ -107,6 +108,7 @@ $notes = Join-Path $root 'dist\RELEASE-NOTES.txt'
 Tag:    $tag
 Title:  Mellow $Version
 Files:  $zip
+        $setupExe
         $winZip
         $macZip
 
@@ -125,9 +127,10 @@ Write-Host "  2. github.com/camppbel-ui/Mellow/releases/new"
 Write-Host "       Choose a tag: $tag   (create new tag on publish)"
 Write-Host "       Title: Mellow $Version"
 Write-Host "       Description: what's new, one '- ' line each"
-Write-Host "       Attach all three, keeping these exact names:"
+Write-Host "       Attach all four, keeping these exact names:"
 Write-Host "         $zip          (every copy's updater downloads this)"
-Write-Host "         $winZip  (the Windows app)"
+Write-Host "         $setupExe    (the Windows download)"
+Write-Host "         $winZip  (the Windows app unzipped, if an installer is blocked)"
 Write-Host "         $macZip      (the Mac app)"
 Write-Host "       Publish release"
 Write-Host ""

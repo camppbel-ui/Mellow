@@ -7633,10 +7633,11 @@ function viewGuide() {
   /* the computer */
   var fromZip = '<div class="note">Got the plain <code>Mellow.zip</code> instead? That one needs <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a> (LTS) installed, and starts with ';
   var winSteps = [
-    ['Download Mellow for Windows', 'From <a href="https://mellow-track.com" target="_blank" rel="noopener">mellow-track.com</a>. Node.js is inside, so there\'s nothing else to install.'],
-    ['Unzip it and double-click <code>Mellow</code>', 'Right-click <code>Mellow-Windows.zip</code>, <b>Extract All</b>, open the <b>Mellow</b> folder and double-click <b>Mellow</b>. It installs itself, adds Mellow to your desktop and Start menu, and opens in its own window. Then you can delete the download.' +
+    ['Download Mellow for Windows', 'Get <b>Mellow-Setup.exe</b> from <a href="https://mellow-track.com" target="_blank" rel="noopener">mellow-track.com</a>. Everything Mellow needs is inside it.' +
+      '<div class="note">If your browser says it isn\'t commonly downloaded, choose <b>Keep</b>.</div>'],
+    ['Open it', 'Double-click <b>Mellow-Setup.exe</b>. Mellow installs in a few seconds, adds itself to your desktop and Start menu, and opens in its own window. Then you can delete the download.' +
       '<div class="note">If Windows says "Windows protected your PC", click <b>More info</b>, then <b>Run anyway</b>. It\'s shown for any app that isn\'t from a big publisher.</div>'],
-    ['It keeps running by the clock', 'Closing the window leaves Mellow running, so syncing and your phone keep working. Its icon sits in the notification area (click <b>^</b> if you don\'t see it): click it to open Mellow, right-click it to <b>Quit</b>.'],
+    ['It keeps running by the clock', 'Closing the window leaves Mellow running, so syncing and your phone keep working. Its icon sits in the notification area (click <b>^</b> if you don\'t see it): click it to open Mellow, right-click it to <b>Quit</b>. To remove Mellow: <b>Settings</b>, <b>Apps</b>, <b>Mellow</b>, <b>Uninstall</b>.'],
     ['Start it with Windows (optional)', 'Right-click Mellow\'s icon by the clock and tick <b>Start Mellow when I sign in</b>.' +
       fromZip + '<code>start-ratchet.cmd</code>.</div>']
   ];
@@ -9388,6 +9389,12 @@ function toggleVoice() { return voice.on ? stopVoice() : startVoice(); }
 
 function startVoice() {
   if (sleepOn) return;
+  // Mellow's Windows window (WebView2) has no speech recognition of its own: voice happens in the browser.
+  if (window.chrome && window.chrome.webview) {
+    toast('Voice works in Chrome or Edge, so Mellow is opening there. Press Ctrl+Space in that window.');
+    try { window.chrome.webview.postMessage('open-in-browser'); } catch (e) {}
+    return;
+  }
   if (!voiceRecognizer()) return toast('Voice needs Chrome or Edge on a computer, or Safari or Chrome on a phone.');
   if (!window.isSecureContext) return toast('Browsers only allow the microphone on the PC itself (localhost) or over https, so voice isn\'t available at this address.');
   aiOpen();

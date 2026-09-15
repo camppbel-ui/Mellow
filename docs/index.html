@@ -244,7 +244,7 @@ footer .r { margin-left: auto; }
         <a class="btn big primary js-download" data-dl="auto" href="#install"><svg><use href="#i-down"/></svg><span class="js-dl-label">Download Mellow</span></a>
         <a class="btn big" href="#install">How to install</a>
       </div>
-      <div class="also">Also for <a class="js-download" data-dl="win" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow-Windows.zip">Windows</a> · <a class="js-download" data-dl="mac" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow-Mac.zip">Mac</a> · <a href="#install" data-os-link="phone">iPhone &amp; iPad</a></div>
+      <div class="also">Also for <a class="js-download" data-dl="win" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow-Setup.exe">Windows</a> · <a class="js-download" data-dl="mac" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow-Mac.zip">Mac</a> · <a href="#install" data-os-link="phone">iPhone &amp; iPad</a></div>
       <div class="release"><span class="dot"></span><span class="js-release">Apps for Windows and Mac, with nothing else to install</span></div>
       <div class="chips">
         <span class="chip"><svg><use href="#i-lock"/></svg>Your data stays on your computer</span>
@@ -301,9 +301,9 @@ footer .r { margin-left: auto; }
           </div>
           <div class="panel" data-panel="win">
             <ol class="steps">
-              <li><b>Download Mellow for Windows</b><span><a class="js-download" data-dl="win" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow-Windows.zip">Mellow-Windows.zip</a>, about 35 MB. Windows 10 or 11.</span></li>
-              <li><b>Unzip it and double-click <code>Mellow</code></b><span>Right-click the zip, choose <i>Extract All</i>, open the <code>Mellow</code> folder and double-click <i>Mellow</i>. If Windows says it protected your PC, click <i>More info</i>, then <i>Run anyway</i>.</span></li>
-              <li><b>That's it</b><span>Mellow installs itself, adds an icon to your desktop and Start menu, and opens in its own window. You can delete the download. While it runs, its icon sits by the clock: right-click it to quit, or to start Mellow when you sign in.</span></li>
+              <li><b>Download Mellow for Windows</b><span><a class="js-download" data-dl="win" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow-Setup.exe">Mellow-Setup.exe</a>, about 35 MB, for Windows 10 or 11. If your browser says it isn't commonly downloaded, choose <i>Keep</i>.</span></li>
+              <li><b>Open it</b><span>Double-click <code>Mellow-Setup.exe</code>. If Windows says it protected your PC, click <i>More info</i>, then <i>Run anyway</i>.</span></li>
+              <li><b>That's it</b><span>Mellow installs in a few seconds, adds itself to your desktop and Start menu, and opens in its own window. You can delete the download. Closing the window keeps Mellow running by the clock: right-click its icon to quit, or to start Mellow when you sign in.</span></li>
               <li><b>Open the Guide</b><span>Press <code>9</code>. It checks what's set up and walks you through connecting Google and the rest.</span></li>
             </ol>
           </div>
@@ -371,7 +371,8 @@ footer .r { margin-left: auto; }
         <details><summary>Is there an iPhone or iPad app?</summary><p>Not in the App Store. Mellow keeps your data on your own computer, so your computer runs it and your iPhone or iPad opens it: add it to your Home Screen and it looks and works like an app. The <i>iPhone &amp; iPad</i> tab under Install shows how.</p></details>
         <details><summary>Windows says it "protected my PC". Is that bad?</summary><p>That warning shows for any app that isn't from a big publisher. Click <i>More info</i> → <i>Run anyway</i>. On a Mac, your Mac says it couldn't verify Mellow: click <i>Done</i>, then <i>System Settings → Privacy &amp; Security → Open Anyway</i>. Either way it's only the first time.</p></details>
         <details><summary>How do updates work?</summary><p>You download the app once. Mellow checks mellow-track.com's releases a few times a day. When a new version is out, you'll see <b>Update to …</b> in the sidebar. Clicking <b>Update now</b> downloads it, keeps all your data, saves the old version under Accounts → Versions, and restarts. Downloading the app again also works: it updates your copy and keeps your data.</p></details>
-        <details><summary>How do I quit or uninstall it?</summary><p>Closing the window leaves Mellow running, so syncing and your phone keep working. To stop it on Windows, right-click its icon by the clock → <i>Quit Mellow</i>; on a Mac, Accounts → Updates → <i>Quit Mellow</i>. To remove it, quit it and delete the app, plus its folder: <code>%LOCALAPPDATA%\Mellow</code> on Windows, or <code>~/Library/Application Support/Mellow</code> on a Mac. That folder holds all your data, so back it up first if you want to keep it.</p></details>
+        <details><summary>How do I quit or uninstall it?</summary><p>Closing the window leaves Mellow running, so syncing and your phone keep working. To stop it on Windows, right-click its icon by the clock → <i>Quit Mellow</i>; on a Mac, Accounts → Updates → <i>Quit Mellow</i>. To remove it on Windows, go to <i>Settings → Apps → Mellow → Uninstall</i>; it asks whether to keep your data. On a Mac, quit it and delete the app and <code>~/Library/Application Support/Mellow</code>, which holds all your data, so back it up first if you want to keep it.</p></details>
+        <details><summary>My browser or antivirus won't let the Windows installer through</summary><p>Some block any new app that isn't from a big publisher. Download <a class="js-download" data-dl="winzip" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow-Windows.zip">Mellow-Windows.zip</a> instead: right-click it, <i>Extract All</i>, open the <code>Mellow</code> folder and double-click <i>Mellow</i>. It's the same app.</p></details>
         <details><summary>I use Linux, or I'd rather run it myself</summary><p><a href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow.zip">Mellow.zip</a> is the plain code. Install <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a> (LTS), unzip it, and run <code>start-ratchet.cmd</code> on Windows or <code>bash start-ratchet.command</code> anywhere else. It updates itself the same way.</p></details>
         <details><summary>Does it work without Gmail or an AI key?</summary><p>Yes. The calendar, tasks, finance, sleep screen and ADHD tools all work on their own, and <code>.ics</code> calendars and bank <code>.csv</code> exports are read without any key. Gmail adds homework and emails; the key adds the assistant and file reading.</p></details>
         <details><summary>Can it block distracting apps?</summary><p>There's an optional blocker that locks games and sites while something is overdue. It ships switched off and only logs what it would do. The <code>SETUP.md</code> file in the folder explains how to turn it on.</p></details>
@@ -401,8 +402,9 @@ footer .r { margin-left: auto; }
   var REPO = 'camppbel-ui/Mellow';
   var LATEST = 'https://github.com/' + REPO + '/releases/latest/download/';
   // What each download button gets: the app for Windows, the app for Mac, or the plain code.
-  var FILES = { win: 'Mellow-Windows.zip', mac: 'Mellow-Mac.zip', zip: 'Mellow.zip' };
-  var urls = { win: LATEST + FILES.win, mac: LATEST + FILES.mac, zip: LATEST + FILES.zip };
+  var FILES = { win: 'Mellow-Setup.exe', winzip: 'Mellow-Windows.zip', mac: 'Mellow-Mac.zip', zip: 'Mellow.zip' };
+  var urls = {};
+  Object.keys(FILES).forEach(function (k) { urls[k] = LATEST + FILES[k]; });
 
   // iPadOS asks for the desktop site and calls itself a Mac; a touch screen gives it away.
   var ua = navigator.userAgent;
@@ -438,8 +440,9 @@ footer .r { margin-left: auto; }
       var byName = {};
       (rel.assets || []).forEach(function (a) { byName[a.name] = a; });
       Object.keys(FILES).forEach(function (k) { if (byName[FILES[k]]) urls[k] = byName[FILES[k]].browser_download_url; });
-      // A release made before there were apps has only the plain zip: send everyone to that rather than to a missing file.
-      if (!byName[FILES.win] && byName[FILES.zip]) urls.win = urls.zip;
+      // An older release may not have every file: send people to the nearest one it has rather than to a missing file.
+      if (!byName[FILES.win]) urls.win = byName[FILES.winzip] ? urls.winzip : byName[FILES.zip] ? urls.zip : urls.win;
+      if (!byName[FILES.winzip] && byName[FILES.zip]) urls.winzip = urls.zip;
       if (!byName[FILES.mac] && byName[FILES.zip]) urls.mac = urls.zip;
       linkDownloads();
       var mine = byName[FILES[os === 'mac' || os === 'zip' ? os : 'win']];
