@@ -1,0 +1,24 @@
+# Your data, sign-ins and keys, if you run Mellow from this folder
+engine/*.json
+!engine/version.json
+!engine/google.json
+!engine/calendars.json
+!engine/tasks.json
+!engine/stocks.json
+!engine/news.json
+!engine/ai.json
+!engine/engine-config.json
+engine/ai-key.txt
+engine/client_secret_*
+engine/google-tokens.json
+engine/assistant/
+engine/drops/
+engine/google-cache/
+engine/*-cache/
+engine/*.tmp
+*.log
+*.new
+*.updating
+dist/
+notify-queue/
+applied-state.json

@@ -1,0 +1,18 @@
+{
+  "_comment": "Engine settings. Tasks live in tasks.json; this is just how the server behaves.",
+
+  "name": "",
+  "_name_note": "What the dashboard calls you in its greeting.",
+
+  "port": 7777,
+
+  "bindHost": "127.0.0.1",
+  "_bindHost_note": "127.0.0.1 keeps the dashboard on this computer. To open it on your phone over Tailscale, put your Tailscale address here AND set a token below.",
+
+  "token": "",
+
+  "passesPerWeek": 2,
+  "_passes_note": "A pass clears a task without doing it. Rolling 7-day window, not a calendar week.",
+
+  "recheckInSeconds": 60
+}

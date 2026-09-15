@@ -1,0 +1,104 @@
+{
+  "_comment": "The ONE file you normally edit. The same file works on both machines - it picks the right section at runtime. Restart the client after changing it.",
+
+  "server": {
+    "url": "http://localhost:7777/api/enforcement",
+    "_url_note": "Your PC's Tailscale machine name. On the PC itself, localhost works. Point at http://localhost:7777/api/enforcement to test with mock-server.js.",
+    "timeoutMs": 8000,
+    "defaultPollSeconds": 300
+  },
+
+  "safety": {
+    "dryRun": true,
+    "_dryRun_note": "TRUE = log what it WOULD block, change nothing. Leave true until the log looks right on BOTH machines.",
+
+    "failClosed": true,
+    "_failClosed_note": "Engine unreachable: true = keep the last known shield up. Matters more now - the Mac depends on the PC being awake.",
+
+    "staleWarnAfterMinutes": 30,
+    "_stale_note": "After this long with no contact, notifications say STALE so you can tell a sleeping PC from real enforcement.",
+
+    "neverBlock": {
+      "windows": [
+        "explorer.exe", "csrss.exe", "winlogon.exe", "services.exe",
+        "lsass.exe", "dwm.exe", "svchost.exe", "SystemSettings.exe",
+        "Taskmgr.exe", "node.exe", "powershell.exe", "cmd.exe",
+        "WindowsTerminal.exe", "msedge.exe"
+      ],
+      "macos": [
+        "Finder", "Dock", "SystemUIServer", "loginwindow",
+        "System Settings", "System Preferences", "Terminal",
+        "Activity Monitor", "node", "Safari"
+      ]
+    },
+    "_neverBlock_note": "Hard allowlist, never blocked even at shield_all. Keep one browser here so you can always reach the dashboard and spend a pass."
+  },
+
+  "groups": {
+    "_comment": "The server names a GROUP, never an app. You define what that means per machine. Domains are shared - a website is a website.",
+
+    "distractions": {
+      "domains": [
+        "instagram.com", "www.instagram.com",
+        "tiktok.com", "www.tiktok.com",
+        "youtube.com", "www.youtube.com", "m.youtube.com",
+        "reddit.com", "www.reddit.com",
+        "x.com", "twitter.com"
+      ],
+      "windows": {
+        "processes": ["Discord.exe", "Spotify.exe"],
+        "firewall": []
+      },
+      "macos": {
+        "processes": ["Discord", "Spotify"]
+      }
+    },
+
+    "games": {
+      "domains": [],
+      "windows": {
+        "processes": [
+          "steam.exe", "steamwebhelper.exe",
+          "EpicGamesLauncher.exe",
+          "RiotClientServices.exe",
+          "Battle.net.exe"
+        ],
+        "firewall": [
+          "D:\\Steam\\steam.exe",
+          "D:\\Epic Games\\Launcher\\Portal\\Binaries\\Win32\\EpicGamesLauncher.exe",
+          "D:\\Riot Games\\Riot Client\\RiotClientServices.exe",
+          "D:\\Battle.net\\Battle.net.exe"
+        ],
+        "_firewall_note": "Full .exe paths get a Windows Firewall outbound block. Gentler than killing - the launcher opens but cannot connect."
+      },
+      "macos": {
+        "processes": ["Steam"],
+        "_note": "macOS has no scriptable per-app outbound firewall, so no firewall list here. Process termination only."
+      }
+    }
+  },
+
+  "shieldAll": {
+    "_comment": "What shield_all means on both machines.",
+    "includeGroups": ["distractions", "games"],
+    "extraProcesses": { "windows": [], "macos": [] },
+    "extraDomains": []
+  },
+
+  "notifications": {
+    "enabled": true,
+    "nudgeOnce": true,
+    "persistentEveryMinutes": 15,
+    "shieldEveryMinutes": 30
+  },
+
+  "paths": {
+    "hostsFile": "C:\\Windows\\System32\\drivers\\etc\\hosts",
+    "hostsFileMac": "/etc/hosts",
+    "logFile": "ratchet-client.log",
+    "stateFile": "applied-state.json",
+    "notifyQueue": "notify-queue",
+    "_notifyQueue_note": "The SYSTEM task cannot draw to your desktop, so it leaves notifications here and the Ratchet-Notify agent shows them."
+  }
+}
+

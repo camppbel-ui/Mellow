@@ -1,0 +1,10 @@
+{
+  "_comment": "Mellow AI settings. The API key is not kept here: add it on the Accounts page, or put it in engine/ai-key.txt.",
+  "enabled": true,
+  "model": "claude-opus-5",
+  "assistantEffort": "high",
+  "scanEffort": "medium",
+  "monthlyLimitUsd": 10,
+  "assistantCanEditEnforcement": false,
+  "_assistantCanEditEnforcement_note": "false: the assistant can read but not change the files that decide what gets blocked, or its own guards. Only change this by hand."
+}

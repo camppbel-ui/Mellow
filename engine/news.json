@@ -1,0 +1,38 @@
+{
+    "_comment":  "Where the News section and the sleep screen\u0027s news widget get today\u0027s ranking. Ratchet does not rank anything itself; each source\u0027s own order is the ranking.",
+    "defaultSource":  "google-top",
+    "_defaultSource_note":  "Which source a device shows until you pick another on the News page. Each device remembers its own pick.",
+    "refreshMinutes":  30,
+    "_refreshMinutes_note":  "How old the cached ranking can get before it is fetched again. Top stories do not reshuffle faster than this.",
+    "maxStories":  20,
+    "sources":  [
+                    {
+                        "id":  "google-top",
+                        "label":  "Top stories",
+                        "name":  "Google News · Top stories",
+                        "ranking":  "Ranked by Google News by how widely each story is being covered.",
+                        "url":  "https://news.google.com/rss?hl=en-US\u0026gl=US\u0026ceid=US:en",
+                        "home":  "https://news.google.com/"
+                    },
+                    {
+                        "id":  "google-world",
+                        "label":  "World",
+                        "name":  "Google News · World",
+                        "ranking":  "Ranked by Google News, world stories only.",
+                        "url":  "https://news.google.com/rss/headlines/section/topic/WORLD?hl=en-US\u0026gl=US\u0026ceid=US:en",
+                        "home":  "https://news.google.com/"
+                    },
+                    {
+                        "id":  "bbc",
+                        "label":  "BBC",
+                        "name":  "BBC News · Top stories",
+                        "ranking":  "In the order BBC News editors placed them on the front page.",
+                        "url":  "https://feeds.bbci.co.uk/news/rss.xml",
+                        "home":  "https://www.bbc.co.uk/news"
+                    }
+                ],
+    "subscriptions":  [
+
+                      ],
+    "_subscriptions_note":  "Papers you subscribe to. Set from the News page. Their links come first and are marked as yours."
+}

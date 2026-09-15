@@ -1,0 +1,24 @@
+{
+  "_comment": "How the Google sync behaves. Which accounts are connected lives in google-accounts.json, which the engine manages - connect and disconnect from the Accounts section of the dashboard.",
+
+  "syncEveryMinutes": 10,
+  "_syncEveryMinutes_note": "How often mail and calendars are re-read. Gmail has no push to a PC without a public server, so this is polling. Ten minutes is plenty for homework.",
+
+  "calendarDaysAhead": 62,
+  "calendarDaysBehind": 35,
+  "_calendarDays_note": "How much of your Google calendars is kept on this PC, either side of today. The month view needs about a month each way.",
+
+  "homeworkLookbackDays": 21,
+  "_homeworkLookbackDays_note": "How far back in the school inbox to look for assignments. Deadlines already more than two days past are never imported.",
+
+  "repliesLookbackDays": 14,
+
+  "replyWithinHours": 24,
+  "_replyWithinHours_note": "How long an email can wait on you before the reply task starts counting as late.",
+
+  "repliesCanShield": false,
+  "_repliesCanShield_note": "false: unanswered email can nag but can never block anything. Deciding a message needs a reply is guesswork, and guesswork should not lock your games. Set true only once you trust what it picks up.",
+
+  "ladders": {},
+  "_ladders_note": "Leave empty for the defaults. To override, give any of 'homework', 'exam' or 'replies' a list of { afterMinutes, level } rungs. Negative afterMinutes means before the deadline."
+}

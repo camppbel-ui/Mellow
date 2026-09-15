@@ -1,0 +1,35 @@
+{
+  "_comment": "The recurring things you do by hand. Homework and email are NOT here - those come from your Google accounts automatically. Edit this file, then restart the engine.",
+
+  "_cadence_help": {
+    "daily": { "type": "daily", "dueBy": "21:00" },
+    "weekdays": { "type": "weekdays", "dueBy": "17:00" },
+    "specific days": { "type": "days", "days": ["sun"], "dueBy": "20:00" },
+    "every N days since you last did it": { "type": "everyNDays", "n": 3, "dueBy": "21:00" }
+  },
+
+  "tasks": [
+    {
+      "id": "laundry",
+      "title": "Laundry",
+      "group": "weekly",
+      "clearedBy": "Wash, dry and put it away, then mark it here",
+      "cadence": { "type": "days", "days": ["sun"], "dueBy": "20:00" },
+      "escalation": [
+        { "afterMinutes": -240, "level": "nudge" },
+        { "afterMinutes": 0, "level": "persistent" }
+      ]
+    },
+    {
+      "id": "finances",
+      "title": "Check on your finances",
+      "group": "weekly",
+      "clearedBy": "Look over your accounts, card balance and anything coming due, then mark it here",
+      "cadence": { "type": "days", "days": ["sun"], "dueBy": "20:00" },
+      "escalation": [
+        { "afterMinutes": -240, "level": "nudge" },
+        { "afterMinutes": 0, "level": "persistent" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "_comment": "Calendars the dashboard shows. Read-only subscriptions to .ics URLs - nothing here can change your calendars, it only reads them.",
+
+  "_how_to_get_a_google_url": [
+    "calendar.google.com on a computer, not the phone app",
+    "hover the calendar in the left list, three dots, Settings and sharing",
+    "scroll to 'Integrate calendar'",
+    "copy 'Secret address in iCal format' - the one ending .ics",
+    "treat it like a password: anyone with it can read that calendar"
+  ],
+
+  "_how_to_get_an_outlook_or_school_url": [
+    "outlook.office.com/calendar, Settings, Calendar, Shared calendars",
+    "under 'Publish a calendar' pick the calendar and 'Can view all details'",
+    "Publish, then copy the ICS link, not the HTML one",
+    "if your university has disabled publishing, ask me and we will find another way"
+  ],
+
+  "_fields": {
+    "id": "Short, unique, used for the cache filename.",
+    "name": "What it is called on the dashboard.",
+    "url": "The .ics address.",
+    "color": "Any CSS colour, used for the dot next to each event.",
+    "refreshMinutes": "How often to re-download. 60 is plenty for a timetable.",
+    "disabled": "true to keep the entry but stop fetching it."
+  },
+
+  "calendars": [
+    {
+      "id": "personal",
+      "name": "Personal",
+      "url": "",
+      "color": "#2f6f4e",
+      "refreshMinutes": 60,
+      "disabled": true,
+      "_note": "Paste your Google secret iCal URL into url, then set disabled to false."
+    },
+    {
+      "id": "school",
+      "name": "School",
+      "url": "",
+      "color": "#2f5f8a",
+      "refreshMinutes": 60,
+      "disabled": true,
+      "_note": "Your university calendar. Same idea - paste the ICS link and enable it."
+    }
+  ]
+}

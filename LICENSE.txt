@@ -1,0 +1,18 @@
+Mellow
+
+Copyright (c) 2026 the author of Mellow
+
+Licensed under the PolyForm Noncommercial License 1.0.0.
+
+Required Notice: Copyright (c) 2026 the author of Mellow (Mellow)
+
+The full text of the license is at:
+https://polyformproject.org/licenses/noncommercial/1.0.0/
+
+In plain words, and not a substitute for the license itself: you may use,
+copy, change and share Mellow for any noncommercial purpose, including
+personal use, study and use by schools and charities. You may not sell it, or
+use it to make money. If you share it, pass this notice along with it.
+
+Mellow comes with no warranty. It shows prices, headlines and your own
+numbers; it is not financial advice.

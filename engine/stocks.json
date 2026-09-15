@@ -1,0 +1,10 @@
+{
+  "_comment": "The stocks shown on the News page, the sleep screen and the morning briefing. Prices come from Yahoo Finance and can be up to 15 minutes delayed.",
+  "symbols": ["SPY", "AAPL", "MSFT", "NVDA"],
+  "_symbols_note": "Ticker symbols, in the order you want them shown. Add or remove freely.",
+  "names": { "SPY": "S&P 500 ETF", "AAPL": "Apple", "MSFT": "Microsoft", "NVDA": "Nvidia" },
+  "colors": {},
+  "domains": {},
+  "_domains_note": "Well-known companies show their logo on their own. For any other, add its website here, like \"AEVA\": \"aeva.com\".",
+  "refreshMinutes": 5
+}
