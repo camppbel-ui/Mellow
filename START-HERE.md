@@ -9,6 +9,10 @@ on your own computer. Nothing about you is sent anywhere unless you connect it.
 It was made by a friend, for themselves, and shared with you to use for free.
 You can change it however you like. You can't sell it: see `LICENSE.txt`.
 
+**Easier way:** get the Windows or Mac app from [mellow-track.com](https://mellow-track.com)
+instead. It brings everything it needs, installs itself, and opens in its own
+window. This folder is the plain version, which needs Node.js (below).
+
 ---
 
 ## 1. Run it (five minutes)

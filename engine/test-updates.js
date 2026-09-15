@@ -124,6 +124,8 @@ console.log('\nRefused');
   check('damaged bytes', throws(() => updates.install(Buffer.from('not a zip at all'), opts), /not a zip/));
   const sneaky = updates.install(makeZip(release('2026.09.20', { 'Mellow/engine/ai-key.txt': 'sk-ant-attacker', 'Mellow/engine/assistant/conversations/x.json': '{}' })), opts);
   check('keys and conversations in a zip are never written', read(app, 'engine/ai-key.txt') === 'sk-ant-secret' && !fs.existsSync(path.join(app, 'engine', 'assistant')) && sneaky.to === '2026.09.20');
+  updates.install(makeZip(release('2026.09.21', { 'Mellow/Mellow.exe': 'MZ fake', 'Mellow/runtime/node.exe': 'MZ fake node' })), opts);
+  check('the app\'s launcher and Node.js are never written', !fs.existsSync(path.join(app, 'Mellow.exe')) && !fs.existsSync(path.join(app, 'runtime')));
   fs.rmSync(app, { recursive: true, force: true });
 }
 

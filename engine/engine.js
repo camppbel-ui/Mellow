@@ -1368,6 +1368,19 @@ async function handle(req, res, cfg) {
     }
   }
 
+  // The downloaded Windows or Mac app has no window of its own to close, so Mellow is quit from here.
+  // Exit code 0 tells the app's launcher this was on purpose, not a crash to restart from.
+  if (route === '/api/app/quit') {
+    if (!loopback || !updates.status().app) return sendJson(res, 400, { error: 'Quit Mellow from the computer running it.' });
+    // Only Mellow's own page or its launcher: another website open in the browser can't close it.
+    const site = req.headers['sec-fetch-site'];
+    if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'not from Mellow' });
+    log('quit from the dashboard');
+    sendJson(res, 200, { ok: true });
+    setTimeout(() => process.exit(0), 400);
+    return undefined;
+  }
+
   /* tasks */
 
   const task = allTasks().find((t) => t.id === body.taskId);

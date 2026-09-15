@@ -143,6 +143,8 @@ function status() {
     current: me.version, repo: me.repo, site: me.site,
     latest, available, checkedAt: state.checkedAt || null, error: state.error || null, noRelease: !!state.noRelease,
     canRestart: process.env.MELLOW_LAUNCHER === '1',
+    // 'windows' or 'mac' when the downloaded app started this engine, so the dashboard can offer Quit.
+    app: /^(windows|mac)$/.test(process.env.MELLOW_APP || '') ? process.env.MELLOW_APP : null,
     lastUpdate: state.lastUpdate || null,
   };
 }
@@ -154,7 +156,9 @@ function keepExisting(rel) {
 
 // Never written by an update, whatever a zip contains.
 const NEVER = [/^engine\/(assistant|drops|google-cache|news-cache|calendar-cache|art)\//, /^engine\/ai-key\.txt$/, /client_secret/i, /^engine\/google-tokens\.json$/,
-  /^engine\/google-accounts\.json$/, /\.log$/, /^dist\//, /^notify-queue\//, /^\.git\//];
+  /^engine\/google-accounts\.json$/, /\.log$/, /^dist\//, /^notify-queue\//, /^\.git\//,
+  // The Windows and Mac apps' own launcher and the Node.js they bring: running while an update installs, and not part of a release.
+  /^runtime\//, /^Mellow\.exe$/i];
 // A launcher can be running while it is replaced, so it is written beside itself and swapped in at the next start.
 const LAUNCHERS = new Set(['start-ratchet.cmd', 'start-ratchet.command']);
 

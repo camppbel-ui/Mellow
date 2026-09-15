@@ -137,6 +137,7 @@ foreach ($d in $includeDirs) {
     $files = if ($d.flat) { Get-ChildItem $base -File -Filter $d.filter } else { Get-ChildItem $base -File -Recurse -Filter $d.filter }
     foreach ($f in $files) {
         $rel = $f.FullName.Substring($root.Length).TrimStart('\')
+        if ($rel -like 'install\app\*') { continue }   # the Windows and Mac apps' launchers: build-apps.ps1 builds those
         $dst = Join-Path $app $rel
         New-Item -ItemType Directory -Path (Split-Path -Parent $dst) -Force | Out-Null
         Copy-Item $f.FullName $dst
@@ -277,7 +278,7 @@ foreach ($f in $textFiles) {
     $rel = $f.FullName.Substring($app.Length).TrimStart('\')
     foreach ($m in $markers) {
         if ($m.Length -ge 3 -and $t.IndexOf($m, [StringComparison]::OrdinalIgnoreCase) -ge 0) {
-            $shown = if ($m.Length -gt 12) { $m.Substring(0, 6) + 'â€¦' } else { $m }
+            $shown = if ($m.Length -gt 12) { $m.Substring(0, 6) + '...' } else { $m }
             $leaks += "$rel contains '$shown'"
         }
     }
@@ -305,41 +306,9 @@ New-Item -ItemType Directory -Path $OutDir -Force | Out-Null
 $zip = Join-Path $OutDir "Mellow-$stamp.zip"
 if (Test-Path $zip) { Remove-Item $zip -Force }
 
-# Not Compress-Archive: the version in Windows PowerShell 5.1 writes paths with
-# backslashes, which a Mac unzips as files literally named "engine\engine.js".
-# Entries get forward slashes, and the launchers get Unix execute permission
-# so a Mac can run start-ratchet.command with a double-click.
-Add-Type -AssemblyName System.IO.Compression
-Add-Type -AssemblyName System.IO.Compression.FileSystem
-$archive = [System.IO.Compression.ZipFile]::Open($zip, [System.IO.Compression.ZipArchiveMode]::Create)
-try {
-    foreach ($f in Get-ChildItem $app -File -Recurse) {
-        $name = 'Mellow/' + $f.FullName.Substring($app.Length).TrimStart('\').Replace('\', '/')
-        $entry = [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $f.FullName, $name, [System.IO.Compression.CompressionLevel]::Optimal)
-        $mode = if ($f.Extension -in @('.command', '.sh')) { 0x81ED } else { 0x81A4 }   # 0100755 / 0100644
-        $entry.ExternalAttributes = $mode -shl 16
-    }
-} finally {
-    $archive.Dispose()
-}
-
-# .NET Framework marks every entry "made on MS-DOS", and unzip tools only read
-# Unix permissions from entries made on Unix. So mark them Unix: the upper byte
-# of "version made by" in each central directory record becomes 3.
-$bytes = [System.IO.File]::ReadAllBytes($zip)
-$eocd = -1
-for ($p = $bytes.Length - 22; $p -ge [Math]::Max(0, $bytes.Length - 65557); $p--) {
-    if ([BitConverter]::ToUInt32($bytes, $p) -eq 0x06054b50) { $eocd = $p; break }
-}
-if ($eocd -lt 0) { throw "Couldn't read back $zip." }
-$count = [BitConverter]::ToUInt16($bytes, $eocd + 10)
-$p = [int][BitConverter]::ToUInt32($bytes, $eocd + 16)
-for ($n = 0; $n -lt $count; $n++) {
-    if ([BitConverter]::ToUInt32($bytes, $p) -ne 0x02014b50) { throw "Unexpected zip layout in $zip." }
-    $bytes[$p + 5] = 3
-    $p += 46 + [BitConverter]::ToUInt16($bytes, $p + 28) + [BitConverter]::ToUInt16($bytes, $p + 30) + [BitConverter]::ToUInt16($bytes, $p + 32)
-}
-[System.IO.File]::WriteAllBytes($zip, $bytes)
+# Forward slashes and Unix permissions, so a Mac can run start-ratchet.command with a double-click.
+. (Join-Path $here 'zip-tools.ps1')
+Write-UnixZip -Path $zip -Entries @(Get-ZipEntries -Dir $app -Prefix 'Mellow')
 Remove-Item $stage -Recurse -Force
 Copy-Item $zip (Join-Path $OutDir 'Mellow.zip') -Force
 

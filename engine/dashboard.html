@@ -7631,23 +7631,23 @@ function viewGuide() {
     '</div></div>';
 
   /* the computer */
+  var fromZip = '<div class="note">Got the plain <code>Mellow.zip</code> instead? That one needs <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a> (LTS) installed, and starts with ';
   var winSteps = [
-    ['Install Node.js', 'Go to <a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a>, download the <b>LTS</b> version, and run the installer with the default options. This is the one thing Mellow needs; it\'s free.'],
-    ['Unzip Mellow somewhere it can stay', 'Right-click the zip, <b>Extract All</b>, and put the <b>Mellow</b> folder in <b>Documents</b>. Don\'t run it from inside the zip.'],
-    ['Double-click <code>start-ratchet.cmd</code>', 'A black window opens and your browser goes to <b>http://localhost:' + port + '</b>. Leave the black window open (minimise it); closing it stops Mellow.' +
-      '<div class="note">If Windows says "Windows protected your PC", click <b>More info</b>, then <b>Run anyway</b>. It\'s shown for any file downloaded from a friend.</div>'],
-    ['Make it an app (optional)', 'Puts Mellow on your desktop and Start menu in its own window. In the Mellow folder, click the address bar, type <b>powershell</b>, press Enter, then paste:' +
-      copyCmd('powershell -ExecutionPolicy Bypass -File .\\install\\make-desktop-app.ps1') +
-      '<div class="note">Or, in Edge or Chrome with Mellow open: the menu, then <b>Apps</b>, then <b>Install Mellow</b>.</div>'],
-    ['Start it with Windows (optional)', 'Press <kbd>Win</kbd> + <kbd>R</kbd>, type <b>shell:startup</b> and press Enter. Right-click <code>start-ratchet.cmd</code>, <b>Create shortcut</b>, and drag the shortcut into the folder that opened.']
+    ['Download Mellow for Windows', 'From <a href="https://mellow-track.com" target="_blank" rel="noopener">mellow-track.com</a>. Node.js is inside, so there\'s nothing else to install.'],
+    ['Unzip it and double-click <code>Mellow</code>', 'Right-click <code>Mellow-Windows.zip</code>, <b>Extract All</b>, open the <b>Mellow</b> folder and double-click <b>Mellow</b>. It installs itself, adds Mellow to your desktop and Start menu, and opens in its own window. Then you can delete the download.' +
+      '<div class="note">If Windows says "Windows protected your PC", click <b>More info</b>, then <b>Run anyway</b>. It\'s shown for any app that isn\'t from a big publisher.</div>'],
+    ['It keeps running by the clock', 'Closing the window leaves Mellow running, so syncing and your phone keep working. Its icon sits in the notification area (click <b>^</b> if you don\'t see it): click it to open Mellow, right-click it to <b>Quit</b>.'],
+    ['Start it with Windows (optional)', 'Right-click Mellow\'s icon by the clock and tick <b>Start Mellow when I sign in</b>.' +
+      fromZip + '<code>start-ratchet.cmd</code>.</div>']
   ];
   var macSteps = [
-    ['Install Node.js', 'Go to <a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a>, download the <b>LTS macOS installer</b>, and run it. This is the one thing Mellow needs; it\'s free.'],
-    ['Unzip Mellow somewhere it can stay', 'Double-click the zip and move the <b>Mellow</b> folder into <b>Documents</b>.'],
-    ['Double-click <code>start-ratchet.command</code>', 'A Terminal window opens and your browser goes to <b>http://localhost:' + port + '</b>. Leave Terminal open; closing it stops Mellow.' +
-      '<div class="note">If your Mac says it can\'t be opened because it\'s from an unidentified developer: open <b>System Settings</b>, then <b>Privacy &amp; Security</b>, scroll down and click <b>Open Anyway</b>. Or open <b>Terminal</b>, type <b>bash</b> and a space, drag <code>start-ratchet.command</code> into the window, and press Return.</div>'],
-    ['Make it an app (optional)', 'In Safari with Mellow open: <b>File</b>, then <b>Add to Dock</b>. In Chrome: the menu, then <b>Cast, save and share</b>, then <b>Install page as app</b>.'],
-    ['Start it when you log in (optional)', 'Open <b>System Settings</b>, then <b>General</b>, then <b>Login Items</b>. Click <b>+</b> and choose <code>start-ratchet.command</code>.']
+    ['Download Mellow for Mac', 'From <a href="https://mellow-track.com" target="_blank" rel="noopener">mellow-track.com</a>. Node.js is inside, for Apple silicon and Intel Macs, so there\'s nothing else to install. It needs macOS 13.5 or newer.'],
+    ['Put it in Applications', 'Open <code>Mellow-Mac.zip</code> in Downloads if it didn\'t open itself, then drag <b>Mellow</b> into <b>Applications</b>.'],
+    ['Open it', 'Double-click Mellow. It opens in its own window.' +
+      '<div class="note">The first time, your Mac says it couldn\'t verify Mellow. Click <b>Done</b>, open <b>System Settings</b>, then <b>Privacy &amp; Security</b>, scroll down and click <b>Open Anyway</b>. That\'s shown for any app that isn\'t from a registered Apple developer, and only once.</div>'],
+    ['It keeps running', 'Closing the window leaves Mellow running, so syncing and your phone keep working. Open Mellow again to get the window back; to stop it, go to Accounts, then Updates, then <b>Quit Mellow</b>.'],
+    ['Start it when you log in (optional)', 'Open <b>System Settings</b>, then <b>General</b>, then <b>Login Items</b>. Click <b>+</b> and choose <b>Mellow</b> in Applications.' +
+      fromZip + '<code>start-ratchet.command</code>.</div>']
   ];
   var linuxSteps = [
     ['Install Node.js 18 or newer', 'From your package manager, or <a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a>.'],
@@ -7662,7 +7662,9 @@ function viewGuide() {
     '<div class="card guide-card enter"><ol class="steps-list">' + osSteps.map(function (st) {
       return '<li><b class="h">' + st[0] + '</b>' + st[1] + '</li>';
     }).join('') + '</ol></div>' +
-    '<p class="news-note">Mellow keeps everything in its own folder. To move it to a new computer, copy the whole folder. To remove it, delete the folder.</p>';
+    '<p class="news-note">Mellow keeps everything in its own folder' +
+      (os === 'mac' ? ' (the app puts it in your Library, under Application Support/Mellow)' : os === 'windows' ? ' (the app puts it in %LOCALAPPDATA%\\Mellow)' : '') +
+      '. To move it to a new computer, copy the whole folder. To remove it, quit Mellow and delete the folder' + (os === 'linux' ? '' : ' and the app') + '.</p>';
 
   /* phones and tablets */
   var lan = (s.addresses || []).filter(function (a) { return a.kind === 'lan'; });
@@ -7777,7 +7779,7 @@ function viewGuide() {
 
   /* troubleshooting */
   var faq = [
-    ['The page says "Mellow isn\'t responding"', '<p>Mellow has stopped on the computer. Start it again with <code>start-ratchet.cmd</code> (Windows) or <code>start-ratchet.command</code> (Mac), and keep that window open.</p>'],
+    ['The page says "Mellow isn\'t responding"', '<p>Mellow has stopped on the computer. Open the Mellow app again. If you started it from the zip instead, run <code>start-ratchet.cmd</code> (Windows) or <code>start-ratchet.command</code> (Mac) and keep that window open.</p>'],
     ['Nothing happens when I start it, or it says Node.js isn\'t installed', '<p>Install the LTS version from <a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a>, then restart the computer so it can find Node, and try again.</p>'],
     ['"Port 7777 is already in use"', '<p>Mellow is probably already running in another window. Close the extra window and open <b>http://localhost:7777</b>.</p>'],
     ['My phone can\'t reach it', '<p>Check, in order: the computer is on and Mellow is running; the phone is on the same Wi-Fi (or Tailscale is on, on both); <code>bindHost</code> is the computer\'s current address; you restarted Mellow after saving.</p>' +
@@ -9314,6 +9316,12 @@ function updatesHtml() {
       (s.onPc ? '<button class="btn primary sm" data-upd-apply="1"' + (upd.busy ? ' disabled' : '') + '>' + I.upload + (upd.busy ? ' Updating…' : ' Update now') + '</button>'
         : '<span class="muted" style="font-size:12.5px">Update from the PC running Mellow.</span>') + '</div>';
   }
+  // The downloaded app has no window of its own to close: Mellow keeps running for syncing and your phone until it's quit here.
+  if (s.app && s.onPc) {
+    html += '<div class="set-row"><div class="lbl"><b>Quit Mellow</b><span>Mellow keeps running after you close its window, so syncing, reminders and your phone keep working' +
+      (s.app === 'windows' ? '. Its icon sits by the clock.' : '.') + ' Quitting stops it until you open Mellow again.</span></div>' +
+      '<button class="btn sm" data-app-quit="1">Quit Mellow</button></div>';
+  }
   html += '</div><p class="news-note">An update replaces Mellow\'s code: its pages and features. Your tasks, finances, health log, settings, keys and Google sign-ins are never touched. ' +
     'How Mellow is right now, including anything you changed with the assistant, is saved under Versions first, so you can go back. Get Mellow for a friend at <a href="' + esc(safeUrl(s.site)) + '" target="_blank" rel="noopener">' + esc(String(s.site).replace(/^https:\/\//, '')) + '</a>.</p>';
   return html;
@@ -9646,6 +9654,16 @@ document.addEventListener('click', function (ev) {
       upd.busy = false;
       render();
       toast(upd.s && upd.s.available ? 'Mellow ' + upd.s.latest.version + ' is out.' : upd.err || (upd.s && upd.s.error) || 'You have the latest Mellow.');
+    });
+  }
+
+  if ((el = ev.target.closest('[data-app-quit]'))) {
+    if (!window.confirm('Quit Mellow?\n\nSyncing, reminders and your phone stop until you open Mellow again.')) return;
+    el.disabled = true;
+    return post('/api/app/quit', {}).then(function (res) {
+      if (!res.ok) { el.disabled = false; return toast((res.body && res.body.error) || 'Mellow didn\'t quit.'); }
+      document.body.innerHTML = '<div style="display:grid;place-items:center;min-height:100vh;padding:24px;text-align:center;font:15px/1.6 system-ui,sans-serif;color:#8b929e">' +
+        '<div><div style="font-size:22px;color:inherit;margin-bottom:6px">Mellow has quit.</div>You can close this window. Open Mellow again whenever you like.</div></div>';
     });
   }
 

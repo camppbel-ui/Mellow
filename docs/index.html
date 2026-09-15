@@ -60,8 +60,12 @@ nav .links a:hover { color: var(--ink); }
 .hero h1 em { font-style: italic; color: var(--accent); }
 .hero p.lead { font-size: 18px; color: var(--ink-2); max-width: 520px; margin: 0 0 30px; }
 .cta { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.also { margin-top: 14px; font-size: 14px; color: var(--muted); }
+.also a { color: var(--ink-2); }
+.also a:hover { color: var(--ink); }
 .release { margin-top: 16px; font: 500 12.5px var(--mono); color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.release .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 0 rgba(95, 199, 150, .6); animation: pulse 2.4s infinite; }
+.release { flex-wrap: nowrap; align-items: baseline; }
+.release .dot { flex: none; align-self: center; width: 7px; height: 7px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 0 rgba(95, 199, 150, .6); animation: pulse 2.4s infinite; }
 @keyframes pulse { 70%, 100% { box-shadow: 0 0 0 8px rgba(95, 199, 150, 0); } }
 .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 26px; }
 .chip { font-size: 13px; color: var(--ink-2); border: 1px solid var(--line); background: rgba(12, 13, 16, .7); border-radius: 99px; padding: 5px 12px; display: inline-flex; gap: 7px; align-items: center; }
@@ -226,21 +230,22 @@ footer .r { margin-left: auto; }
   <div class="wrap">
     <a class="brand" href="#top"><img src="icon.png" alt=""><b>Mellow</b></a>
     <div class="links"><a href="#features">Features</a><a href="#install">Install</a><a href="#updates">Updates</a><a href="#privacy">Privacy</a><a href="#faq">FAQ</a></div>
-    <a class="btn sm primary js-download" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow.zip"><svg><use href="#i-down"/></svg>Download</a>
+    <a class="btn sm primary js-download" data-dl="auto" href="#download"><svg><use href="#i-down"/></svg>Download</a>
   </div>
 </nav>
 
 <main id="top">
   <div class="wrap hero">
     <div>
-      <div class="eyebrow">Free · Windows &amp; Mac · iPad and phone too</div>
+      <div class="eyebrow">Free · Apps for Windows &amp; Mac · iPhone and iPad too</div>
       <h1>Your whole week, <em>calm</em> and in one place.</h1>
       <p class="lead">Mellow pulls your classes, homework and emails into one quiet dashboard, keeps an eye on your money and subscriptions, and has an assistant that helps you start the next thing. It runs on your own computer.</p>
-      <div class="cta">
-        <a class="btn big primary js-download" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow.zip"><svg><use href="#i-down"/></svg><span class="js-dl-label">Download Mellow</span></a>
+      <div class="cta" id="download">
+        <a class="btn big primary js-download" data-dl="auto" href="#install"><svg><use href="#i-down"/></svg><span class="js-dl-label">Download Mellow</span></a>
         <a class="btn big" href="#install">How to install</a>
       </div>
-      <div class="release"><span class="dot"></span><span class="js-release">One download for Windows and Mac</span></div>
+      <div class="also">Also for <a class="js-download" data-dl="win" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow-Windows.zip">Windows</a> · <a class="js-download" data-dl="mac" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow-Mac.zip">Mac</a> · <a href="#install" data-os-link="phone">iPhone &amp; iPad</a></div>
+      <div class="release"><span class="dot"></span><span class="js-release">Apps for Windows and Mac, with nothing else to install</span></div>
       <div class="chips">
         <span class="chip"><svg><use href="#i-lock"/></svg>Your data stays on your computer</span>
         <span class="chip"><svg><use href="#i-repeat"/></svg>Updates itself in one click</span>
@@ -286,7 +291,7 @@ footer .r { margin-left: auto; }
 
   <section id="install">
     <div class="wrap">
-      <div class="sec-head reveal"><div class="eyebrow">Install</div><h2>Up and running in five minutes.</h2><p>One download works on both Windows and Mac. Pick yours:</p></div>
+      <div class="sec-head reveal"><div class="eyebrow">Install</div><h2>Up and running in two minutes.</h2><p>Download the app for your computer. Everything it needs is inside, and after that it keeps itself up to date. Pick yours:</p></div>
       <div class="install">
         <div class="reveal">
           <div class="os" role="tablist">
@@ -296,31 +301,31 @@ footer .r { margin-left: auto; }
           </div>
           <div class="panel" data-panel="win">
             <ol class="steps">
-              <li><b>Install Node.js</b><span>Get the <b style="display:inline;padding:0;font-size:inherit">LTS</b> version from <a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a> and run the installer with the default options. It's free, and it's the one thing Mellow needs.</span></li>
-              <li><b>Download and unzip Mellow</b><span>Right-click <code>Mellow.zip</code>, choose <i>Extract All</i>, and put the <code>Mellow</code> folder somewhere it can stay, like Documents.</span></li>
-              <li><b>Double-click <code>start-ratchet.cmd</code></b><span>If Windows says it protected your PC, click <i>More info</i>, then <i>Run anyway</i>. Mellow opens in your browser at <code>localhost:7777</code>. Leave the black window open while you use it.</span></li>
+              <li><b>Download Mellow for Windows</b><span><a class="js-download" data-dl="win" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow-Windows.zip">Mellow-Windows.zip</a>, about 35 MB. Windows 10 or 11.</span></li>
+              <li><b>Unzip it and double-click <code>Mellow</code></b><span>Right-click the zip, choose <i>Extract All</i>, open the <code>Mellow</code> folder and double-click <i>Mellow</i>. If Windows says it protected your PC, click <i>More info</i>, then <i>Run anyway</i>.</span></li>
+              <li><b>That's it</b><span>Mellow installs itself, adds an icon to your desktop and Start menu, and opens in its own window. You can delete the download. While it runs, its icon sits by the clock: right-click it to quit, or to start Mellow when you sign in.</span></li>
               <li><b>Open the Guide</b><span>Press <code>9</code>. It checks what's set up and walks you through connecting Google and the rest.</span></li>
             </ol>
           </div>
           <div class="panel" data-panel="mac" hidden>
             <ol class="steps">
-              <li><b>Install Node.js</b><span>Get the <b style="display:inline;padding:0;font-size:inherit">LTS</b> macOS installer from <a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a> and run it.</span></li>
-              <li><b>Download and unzip Mellow</b><span>Double-click <code>Mellow.zip</code> in Downloads, then drag the <code>Mellow</code> folder into Documents.</span></li>
-              <li><b>Double-click <code>start-ratchet.command</code></b><span>If your Mac says it can't be opened, go to <i>System Settings → Privacy &amp; Security</i>, scroll down and click <i>Open Anyway</i>. Mellow opens in your browser. Leave the Terminal window open.</span></li>
+              <li><b>Download Mellow for Mac</b><span><a class="js-download" data-dl="mac" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow-Mac.zip">Mellow-Mac.zip</a>, about 80 MB. Works on Apple silicon and Intel Macs with macOS 13.5 or newer.</span></li>
+              <li><b>Drag Mellow into Applications</b><span>Open the zip in Downloads if it didn't open itself, then drag <i>Mellow</i> into your <i>Applications</i> folder.</span></li>
+              <li><b>Open it, once the long way</b><span>Double-click Mellow. The first time, your Mac says it couldn't verify it: click <i>Done</i>, go to <i>System Settings → Privacy &amp; Security</i>, scroll down and click <i>Open Anyway</i>. After that it opens like any app, in its own window.</span></li>
               <li><b>Open the Guide</b><span>Press <code>9</code> for the rest of the setup, step by step.</span></li>
             </ol>
           </div>
           <div class="panel" data-panel="phone" hidden>
             <ol class="steps">
-              <li><b>Set Mellow up on a computer first</b><span>An iPad or phone can't run Mellow by itself. Your Windows PC or Mac runs it, and the phone opens it.</span></li>
+              <li><b>Set Mellow up on a computer first</b><span>There's no App Store app: an iPhone or iPad can't run Mellow by itself. Your Windows PC or Mac runs it, and your phone opens it, with your data staying on the computer.</span></li>
               <li><b>Let the phone reach it</b><span>In Mellow, open the Guide (<code>9</code>) → <i>Phones and tablets</i>. It shows your computer's exact address, and how to use <a href="https://tailscale.com" target="_blank" rel="noopener">Tailscale</a> to reach it away from home.</span></li>
-              <li><b>Add to Home Screen</b><span>Open that address in Safari or Chrome, then <i>Share → Add to Home Screen</i>. It opens full screen, like an app.</span></li>
+              <li><b>Add to Home Screen</b><span>Open that address in Safari, then <i>Share → Add to Home Screen</i>. It gets its own icon and opens full screen, like an app. It's always as up to date as your computer, so it never needs updating itself.</span></li>
             </ol>
           </div>
         </div>
         <div class="card need reveal">
           <h3>What you'll need</h3>
-          <div class="item"><svg><use href="#i-node"/></svg><div><b>Node.js LTS <span class="tag">required</span></b><span>Free, from nodejs.org. Mellow is built on it.</span></div></div>
+          <div class="item"><svg><use href="#i-node"/></svg><div><b>A Windows PC or a Mac <span class="tag">required</span></b><span>Windows 10 or 11, or macOS 13.5 or newer. Nothing else to install: the app brings what it needs.</span></div></div>
           <div class="item"><svg><use href="#i-mail"/></svg><div><b>Your own Google sign-in <span class="tag">optional</span></b><span>About 20 minutes, once, to let Mellow read your Gmail and Calendar. The Guide in the app walks you through it, and Mellow can't send or delete anything.</span></div></div>
           <div class="item"><svg><use href="#i-key"/></svg><div><b>An Anthropic API key <span class="tag">optional</span></b><span>For the assistant, reading dropped files and finding subscriptions. You pay Anthropic for what you use, usually a few dollars a month, with a monthly limit you set.</span></div></div>
         </div>
@@ -334,13 +339,13 @@ footer .r { margin-left: auto; }
         <div>
           <div class="eyebrow">Always up to date</div>
           <h2>New features show up on their own.</h2>
-          <p>Mellow checks for a new version a few times a day. When there is one, a link appears in the sidebar with what's new, and <b>Update now</b> installs it and restarts Mellow for you.</p>
+          <p>Download the app once. Mellow checks for a new version a few times a day, and when there is one, a link appears in the sidebar with what's new. <b>Update now</b> installs it and restarts Mellow for you, with no new download.</p>
           <p style="color:var(--muted)">Updates only replace Mellow's code. Your tasks, money, health log, settings and sign-ins stay exactly as they are, and the old version is saved so you can go back.</p>
         </div>
         <div class="upd">
           <div class="top"><b class="js-upd-title">Mellow is out</b><span class="new">NEW</span></div>
           <ul class="js-upd-notes"><li>Subscriptions found in your email, with every charge and renewal date</li><li>Finance in tabs, with a guide on what to drop in each</li><li>Clock styles for night mode</li></ul>
-          <div class="row"><span class="js-upd-date">Accounts → Updates</span><a class="btn sm primary js-download" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow.zip"><svg><use href="#i-down"/></svg>Update now</a></div>
+          <div class="row"><span class="js-upd-date">Accounts → Updates</span><a class="btn sm primary js-download" data-dl="auto" href="#install"><svg><use href="#i-down"/></svg>Update now</a></div>
         </div>
       </div>
     </div>
@@ -362,21 +367,24 @@ footer .r { margin-left: auto; }
       <div class="sec-head reveal"><div class="eyebrow">Questions</div><h2>Good to know.</h2></div>
       <div class="faq reveal">
         <details><summary>Is it really free?</summary><p>Yes. Mellow is shared under the PolyForm Noncommercial License: use it, change it, share it with friends. You just can't sell it. The optional AI features use your own Anthropic key, which you pay for as you use them.</p></details>
-        <details><summary>Why do I need Node.js?</summary><p>Mellow is a small program your computer runs, and your browser shows it. Node.js is what runs it. It's free, it's safe, and you install it once.</p></details>
-        <details><summary>Windows says it "protected my PC". Is that bad?</summary><p>That warning shows for any program that isn't from a big publisher. Click <i>More info</i> → <i>Run anyway</i>. On a Mac, it's <i>System Settings → Privacy &amp; Security → Open Anyway</i>.</p></details>
-        <details><summary>How do updates work?</summary><p>Mellow checks mellow-track.com's releases a few times a day. When a new version is out, you'll see <b>Update to …</b> in the sidebar. Clicking <b>Update now</b> downloads it, keeps all your data, saves the old version under Accounts → Versions, and restarts. You can also download the newest zip here and unzip it over your old folder.</p></details>
+        <details><summary>Do I need to install anything else?</summary><p>No. The Windows and Mac apps carry Node.js, the small engine Mellow runs on, inside them. Mellow runs on your computer and shows itself in its own window.</p></details>
+        <details><summary>Is there an iPhone or iPad app?</summary><p>Not in the App Store. Mellow keeps your data on your own computer, so your computer runs it and your iPhone or iPad opens it: add it to your Home Screen and it looks and works like an app. The <i>iPhone &amp; iPad</i> tab under Install shows how.</p></details>
+        <details><summary>Windows says it "protected my PC". Is that bad?</summary><p>That warning shows for any app that isn't from a big publisher. Click <i>More info</i> → <i>Run anyway</i>. On a Mac, your Mac says it couldn't verify Mellow: click <i>Done</i>, then <i>System Settings → Privacy &amp; Security → Open Anyway</i>. Either way it's only the first time.</p></details>
+        <details><summary>How do updates work?</summary><p>You download the app once. Mellow checks mellow-track.com's releases a few times a day. When a new version is out, you'll see <b>Update to …</b> in the sidebar. Clicking <b>Update now</b> downloads it, keeps all your data, saves the old version under Accounts → Versions, and restarts. Downloading the app again also works: it updates your copy and keeps your data.</p></details>
+        <details><summary>How do I quit or uninstall it?</summary><p>Closing the window leaves Mellow running, so syncing and your phone keep working. To stop it on Windows, right-click its icon by the clock → <i>Quit Mellow</i>; on a Mac, Accounts → Updates → <i>Quit Mellow</i>. To remove it, quit it and delete the app, plus its folder: <code>%LOCALAPPDATA%\Mellow</code> on Windows, or <code>~/Library/Application Support/Mellow</code> on a Mac. That folder holds all your data, so back it up first if you want to keep it.</p></details>
+        <details><summary>I use Linux, or I'd rather run it myself</summary><p><a href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow.zip">Mellow.zip</a> is the plain code. Install <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a> (LTS), unzip it, and run <code>start-ratchet.cmd</code> on Windows or <code>bash start-ratchet.command</code> anywhere else. It updates itself the same way.</p></details>
         <details><summary>Does it work without Gmail or an AI key?</summary><p>Yes. The calendar, tasks, finance, sleep screen and ADHD tools all work on their own, and <code>.ics</code> calendars and bank <code>.csv</code> exports are read without any key. Gmail adds homework and emails; the key adds the assistant and file reading.</p></details>
         <details><summary>Can it block distracting apps?</summary><p>There's an optional blocker that locks games and sites while something is overdue. It ships switched off and only logs what it would do. The <code>SETUP.md</code> file in the folder explains how to turn it on.</p></details>
-        <details><summary>Something isn't working</summary><p>Most things are covered in the Guide inside Mellow (press <code>9</code>). Make sure the black Mellow window is still open, and that you installed the LTS version of Node.js and restarted your computer after installing it.</p></details>
+        <details><summary>Something isn't working</summary><p>Most things are covered in the Guide inside Mellow (press <code>9</code>). If the window says Mellow isn't responding, open the Mellow app again. Its log is <code>engine/app.log</code> in the folder above, if you want to send it to whoever gave you Mellow.</p></details>
       </div>
     </div>
   </section>
 
   <div class="wrap final reveal">
     <h2>Make this week a calmer one.</h2>
-    <p>Download Mellow, unzip it, and double-click the start file. That's it.</p>
-    <a class="btn big primary js-download" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow.zip"><svg><use href="#i-down"/></svg><span class="js-dl-label">Download Mellow</span></a>
-    <div class="release" style="justify-content:center"><span class="js-release">One download for Windows and Mac</span></div>
+    <p>Download the app, open it, and you're in. It keeps itself up to date from then on.</p>
+    <a class="btn big primary js-download" data-dl="auto" href="#install"><svg><use href="#i-down"/></svg><span class="js-dl-label">Download Mellow</span></a>
+    <div class="release" style="justify-content:center"><span class="js-release">Apps for Windows and Mac, with nothing else to install</span></div>
   </div>
 </main>
 
@@ -391,13 +399,27 @@ footer .r { margin-left: auto; }
 <script>
 (function () {
   var REPO = 'camppbel-ui/Mellow';
-  var FALLBACK = 'https://github.com/' + REPO + '/releases/latest/download/Mellow.zip';
+  var LATEST = 'https://github.com/' + REPO + '/releases/latest/download/';
+  // What each download button gets: the app for Windows, the app for Mac, or the plain code.
+  var FILES = { win: 'Mellow-Windows.zip', mac: 'Mellow-Mac.zip', zip: 'Mellow.zip' };
+  var urls = { win: LATEST + FILES.win, mac: LATEST + FILES.mac, zip: LATEST + FILES.zip };
 
-  // Label the button for this computer; it's the same zip either way.
+  // iPadOS asks for the desktop site and calls itself a Mac; a touch screen gives it away.
   var ua = navigator.userAgent;
-  var os = /iPhone|iPad|Android/i.test(ua) ? 'phone' : /Mac/i.test(ua) ? 'mac' : /Win/i.test(ua) ? 'win' : null;
-  var labels = { win: 'Download for Windows', mac: 'Download for Mac', phone: 'Download (for your computer)' };
+  var touchMac = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+  var os = /iPhone|iPad|iPod|Android/i.test(ua) || touchMac ? 'phone' : /Mac/i.test(ua) ? 'mac' : /Win/i.test(ua) ? 'win' : /Linux|CrOS/i.test(ua) ? 'zip' : null;
+  var labels = { win: 'Download for Windows', mac: 'Download for Mac', phone: 'Get it on your computer', zip: 'Download Mellow' };
   if (os) document.querySelectorAll('.js-dl-label').forEach(function (el) { el.textContent = labels[os]; });
+
+  function linkDownloads() {
+    document.querySelectorAll('.js-download').forEach(function (a) {
+      var kind = a.getAttribute('data-dl');
+      if (kind === 'auto') kind = os === 'phone' ? null : os || 'win';
+      if (kind && urls[kind]) a.href = urls[kind];
+      else { a.href = '#install'; a.setAttribute('data-os-link', 'phone'); }
+    });
+  }
+  linkDownloads();
 
   // The install steps for this computer.
   function showOs(which) {
@@ -405,18 +427,25 @@ footer .r { margin-left: auto; }
     document.querySelectorAll('[data-panel]').forEach(function (p) { p.hidden = p.getAttribute('data-panel') !== which; });
   }
   document.querySelectorAll('[data-os]').forEach(function (b) { b.addEventListener('click', function () { showOs(b.getAttribute('data-os')); }); });
-  if (os) showOs(os);
+  document.addEventListener('click', function (e) { var a = e.target.closest('[data-os-link]'); if (a) showOs(a.getAttribute('data-os-link')); });
+  if (os && os !== 'zip') showOs(os);
 
   // The latest release: its version, date, notes, and the file itself.
   fetch('https://api.github.com/repos/' + REPO + '/releases/latest', { headers: { Accept: 'application/vnd.github+json' } })
     .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
     .then(function (rel) {
       var v = String(rel.tag_name || '').replace(/^v/i, '');
-      var asset = (rel.assets || []).filter(function (a) { return a.name === 'Mellow.zip'; })[0] || (rel.assets || []).filter(function (a) { return /\.zip$/i.test(a.name); })[0];
+      var byName = {};
+      (rel.assets || []).forEach(function (a) { byName[a.name] = a; });
+      Object.keys(FILES).forEach(function (k) { if (byName[FILES[k]]) urls[k] = byName[FILES[k]].browser_download_url; });
+      // A release made before there were apps has only the plain zip: send everyone to that rather than to a missing file.
+      if (!byName[FILES.win] && byName[FILES.zip]) urls.win = urls.zip;
+      if (!byName[FILES.mac] && byName[FILES.zip]) urls.mac = urls.zip;
+      linkDownloads();
+      var mine = byName[FILES[os === 'mac' || os === 'zip' ? os : 'win']];
       var when = rel.published_at ? new Date(rel.published_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' }) : '';
-      var size = asset && asset.size ? ' · ' + Math.round(asset.size / 1024) + ' KB' : '';
+      var size = mine && mine.size && os !== 'phone' ? ' · ' + Math.round(mine.size / 1048576) + ' MB' : '';
       document.querySelectorAll('.js-release').forEach(function (el) { el.textContent = 'Version ' + v + (when ? ' · released ' + when : '') + size + ' · Windows & Mac'; });
-      if (asset) document.querySelectorAll('.js-download').forEach(function (a) { a.href = asset.browser_download_url; });
       document.querySelector('.js-upd-title').textContent = 'Mellow ' + v + ' is out';
       if (when) document.querySelector('.js-upd-date').textContent = 'Released ' + when;
       var lines = String(rel.body || '').split(/\r?\n/).map(function (l) { return l.replace(/^\s*[-*•]\s*/, '').trim(); }).filter(function (l) { return l && !/^#/.test(l); }).slice(0, 4);
@@ -426,9 +455,7 @@ footer .r { margin-left: auto; }
         lines.forEach(function (l) { var li = document.createElement('li'); li.textContent = l; ul.appendChild(li); });
       }
     })
-    .catch(function () {
-      document.querySelectorAll('.js-download').forEach(function (a) { a.href = FALLBACK; });
-    });
+    .catch(function () { linkDownloads(); });
 
   // Sections ease in as they scroll into view.
   if ('IntersectionObserver' in window) {
