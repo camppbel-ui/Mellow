@@ -227,7 +227,7 @@ kbd {
 .section-head .sub { color: var(--muted); font-size: 12.5px; }
 .section-head .right { margin-left: auto; }
 
-.card { background: linear-gradient(180deg, var(--surface), rgba(12, 13, 16, 0.86)); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset; }
+.card { background: linear-gradient(90deg, transparent 3%, var(--hud-line) 20%, transparent 58%) top / 100% 1px no-repeat, linear-gradient(180deg, var(--surface), rgba(12, 13, 16, 0.86)); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset; }
 .lift { transition: border-color 0.15s, box-shadow 0.15s; }
 .lift:hover { border-color: var(--line-strong); box-shadow: var(--shadow); }
 
@@ -2117,6 +2117,419 @@ body.panel-open .org-fab { display: none; }
   .fx-now .what { font-size: 46px; }
 }
 
+/* ==========================================================================
+   HUD: a quiet heads-up display over the whole app. A line of status over
+   each page, ring gauges, lit panel edges, a faint grid behind it all.
+   Cyan only ever means "the system"; late and due-soon stay red and amber.
+   ========================================================================== */
+:root {
+  --hud: #6fd3ff;
+  --hud-2: #38a9f0;
+  --hud-soft: rgba(111, 211, 255, 0.07);
+  --hud-line: rgba(111, 211, 255, 0.24);
+  --hud-glow: rgba(111, 211, 255, 0.5);
+}
+html { scrollbar-color: #1f3547 transparent; }
+
+/* A faint grid, strongest where the light comes from. Its own fixed layer, like the glow. */
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image: linear-gradient(rgba(111, 211, 255, 0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(111, 211, 255, 0.045) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(110% 80% at 85% 0%, #000, transparent 72%); mask-image: radial-gradient(110% 80% at 85% 0%, #000, transparent 72%);
+}
+/* Switching page: one faint light passes down the screen. */
+.animate .main::before { content: ""; position: fixed; left: 0; right: 0; top: 0; height: 140px; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(111, 211, 255, 0.055) 60%, rgba(111, 211, 255, 0.12) 98%, transparent); animation: page-scan 0.85s cubic-bezier(.4, 0, .6, 1) both; }
+@keyframes page-scan { from { transform: translateY(-140px); } to { transform: translateY(100vh); opacity: 0; } }
+
+/* The status line over each page */
+.hud-bar { display: flex; align-items: center; gap: 8px 18px; flex-wrap: wrap; flex-basis: 100%; width: 100%; margin: 0 0 16px; padding: 0 0 9px; position: relative;
+  font: 500 10.5px/1.2 var(--mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+  border-bottom: 1px solid transparent; border-image: linear-gradient(90deg, var(--hud-line), rgba(111, 211, 255, 0.07) 60%, transparent) 1; }
+.hud-bar::after { content: ""; position: absolute; left: 0; bottom: -1px; width: 64px; height: 1px; background: var(--hud); box-shadow: 0 0 8px var(--hud-glow); }
+.animate .hud-bar::after { animation: hud-sweep 1.1s cubic-bezier(.3, .7, .2, 1) both; }
+@keyframes hud-sweep { from { width: 0; opacity: 0; } 35% { opacity: 1; } 65% { left: 30%; width: 140px; } to { left: 0; width: 64px; } }
+.hud-id { display: inline-flex; align-items: center; gap: 8px; color: var(--hud); white-space: nowrap; }
+.hud-id em { font-style: normal; color: var(--faint); margin: 0 -3px; }
+.hud-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--hud); box-shadow: 0 0 0 3px rgba(111, 211, 255, 0.12), 0 0 10px var(--hud-glow); animation: hud-blink 3.2s ease-in-out infinite; flex: none; display: inline-block; }
+@keyframes hud-blink { 50% { opacity: 0.45; box-shadow: 0 0 0 5px rgba(111, 211, 255, 0.04), 0 0 4px var(--hud-glow); } }
+.hud-tel { display: flex; gap: 6px 16px; flex-wrap: wrap; min-width: 0; }
+.hud-tel > span { color: var(--ink-2); white-space: nowrap; }
+.hud-tel small { font: inherit; color: var(--faint); margin-right: 6px; }
+.hud-tel .bad { color: var(--bad); }
+.hud-tel .warn { color: var(--warn); }
+.hud-tel .hud { color: var(--hud); }
+.hud-clock { margin-left: auto; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.today-head .hud-bar { margin-bottom: 2px; }
+@media (max-width: 560px) {
+  .hud-tel > span:nth-child(n+3) { display: none; }
+  .hud-bar { letter-spacing: 0.07em; gap: 6px 12px; }
+}
+.page-head h1, .today-head h1 { text-shadow: 0 0 42px rgba(111, 211, 255, 0.14); }
+.animate .page-head h1, .animate .today-head h1 { animation: hud-title 0.7s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes hud-title { from { opacity: 0; filter: blur(8px); transform: translateY(6px); } }
+.page-head .eyebrow, .today-head .eyebrow { color: var(--accent); }
+
+/* Headings, rules and the sidebar */
+.section-head { border-image: linear-gradient(90deg, var(--hud-line), var(--line-strong) 26%, transparent 85%) 1; }
+.section-head h2::before { content: ""; display: inline-block; width: 14px; height: 2px; margin-right: 10px; vertical-align: 7px; border-radius: 1px; background: var(--hud); box-shadow: 0 0 8px var(--hud-glow); }
+.col-head h2::before, .group-head h2::before { background: var(--hud); box-shadow: 0 0 10px var(--hud-glow); }
+.nav button.on { background: linear-gradient(90deg, rgba(111, 211, 255, 0.1), rgba(14, 26, 48, 0.2)); box-shadow: inset 0 0 0 1px rgba(111, 211, 255, 0.16); }
+.nav button.on::before { background: var(--hud); box-shadow: 0 0 12px var(--hud); }
+.nav button.on svg { color: var(--hud); filter: drop-shadow(0 0 4px var(--hud-glow)); }
+.meter i { background: linear-gradient(90deg, var(--accent-strong), var(--hud)); box-shadow: 0 0 10px rgba(111, 211, 255, 0.45); }
+.topbar { border-bottom-color: rgba(111, 211, 255, 0.14); }
+.topbar nav button.on { border-bottom-color: var(--hud); }
+.brand { gap: 18px; padding-left: 12px; }
+.reactor { position: relative; display: grid; place-items: center; flex: none; width: 34px; height: 34px; }
+.reactor::before, .reactor::after { content: ""; position: absolute; border-radius: 50%; pointer-events: none; }
+.reactor::before { inset: -6px; border: 1px dashed rgba(111, 211, 255, 0.35); animation: spin 26s linear infinite; }
+.reactor::after { inset: -10px; border: 1.5px solid transparent; border-top-color: rgba(111, 211, 255, 0.75); border-right-color: rgba(111, 211, 255, 0.14); animation: spin 5s linear infinite reverse; }
+.sys { display: flex; gap: 8px 14px; flex-wrap: wrap; margin-top: 16px; font: 500 10px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2); }
+.sys span { display: inline-flex; align-items: center; gap: 6px; cursor: default; }
+.sys i { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); }
+.sys .on i { background: var(--good); box-shadow: 0 0 8px rgba(95, 199, 150, 0.8); }
+.sys .warn i { background: var(--warn); box-shadow: 0 0 8px rgba(230, 179, 92, 0.8); }
+.sys .busy i { background: var(--hud); box-shadow: 0 0 8px var(--hud-glow); animation: hud-blink 1s ease-in-out infinite; }
+.sys .off { color: var(--faint); }
+
+/* Buttons, the assistant button, empty states */
+.btn.primary { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 8px 22px -10px rgba(47, 107, 255, 0.8), 0 0 0 1px rgba(111, 211, 255, 0.06); }
+.btn.primary:hover:not(:disabled) { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.2) inset, 0 10px 26px -10px rgba(47, 107, 255, 0.95), 0 0 18px -4px var(--hud-glow); }
+.btn:not(.primary):not(.ghost):hover:not(:disabled) { border-color: rgba(111, 211, 255, 0.35); }
+.fab::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; border: 1px solid rgba(111, 211, 255, 0.6); pointer-events: none; animation: fab-ping 3.8s cubic-bezier(.2, .6, .3, 1) infinite; }
+@keyframes fab-ping { 0% { transform: scale(1); opacity: 0.9; } 55%, 100% { transform: scale(1.22); opacity: 0; } }
+.empty .ico { color: var(--hud); background: rgba(111, 211, 255, 0.06); box-shadow: inset 0 0 0 1px var(--hud-line), 0 0 0 6px rgba(111, 211, 255, 0.035), 0 0 24px -4px var(--hud-glow); }
+.panel { border-left-color: rgba(111, 211, 255, 0.2); }
+.panel .ph { border-bottom: 1px solid transparent; border-image: linear-gradient(90deg, var(--hud-line), var(--line) 50%) 1; }
+.ai-orb { position: relative; width: 74px; height: 74px; margin: 6px 0 16px; }
+.ai-orb i { position: absolute; inset: 0; border-radius: 50%; border: 1px solid rgba(111, 211, 255, 0.3); }
+.ai-orb i:nth-child(1) { border-style: dashed; animation: spin 18s linear infinite; }
+.ai-orb i:nth-child(2) { inset: 9px; border-color: transparent; border-top-color: var(--hud); border-left-color: rgba(111, 211, 255, 0.3); animation: spin 3.2s linear infinite; }
+.ai-orb i:nth-child(3) { inset: 18px; border-color: rgba(111, 211, 255, 0.22); animation: spin 7s linear infinite reverse; }
+.ai-orb b { position: absolute; inset: 27px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #e6fbff, var(--hud) 40%, var(--hud-2) 78%); box-shadow: 0 0 18px var(--hud-glow), 0 0 40px rgba(111, 211, 255, 0.25); animation: orb-breathe 3.6s ease-in-out infinite; }
+@keyframes orb-breathe { 50% { transform: scale(0.86); box-shadow: 0 0 10px var(--hud-glow), 0 0 22px rgba(111, 211, 255, 0.15); } }
+/* The suggested questions had no size for their arrows, and a hidden voice bar still showed as an empty strip. */
+.row-link svg { width: 15px; height: 15px; flex: none; color: var(--muted); transition: transform 0.2s, color 0.2s; }
+.row-link:hover svg { color: var(--hud); transform: translateX(3px); }
+.voice-bar[hidden] { display: none; }
+
+/* Ring gauges */
+.hud-ring { width: 100%; height: 100%; display: block; overflow: visible; }
+.hud-ring .tk line { stroke: rgba(111, 211, 255, 0.2); stroke-width: 0.5; }
+.hud-ring .tk line.maj { stroke: rgba(111, 211, 255, 0.5); stroke-width: 0.9; }
+.hud-ring .tr { fill: none; stroke: rgba(255, 255, 255, 0.06); stroke-width: 3.5; }
+.hud-ring .ar { fill: none; stroke: var(--rc, var(--hud)); stroke-width: 3.5; stroke-linecap: round; filter: drop-shadow(0 0 2.5px var(--rc, var(--hud))); }
+.hud-ring .in { fill: rgba(111, 211, 255, 0.025); stroke: rgba(111, 211, 255, 0.22); stroke-width: 0.6; stroke-dasharray: 1.4 2.6; transform-origin: 50px 50px; animation: spin 60s linear infinite; }
+.animate .hud-ring .ar { animation: ring-in 1s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes ring-in { from { stroke-dasharray: 0 264; } }
+
+/* Suggested imports */
+.imp { padding: 4px 16px 2px; margin: 0 0 18px; border-color: var(--hud-line); position: relative;
+  background: radial-gradient(80% 120% at 0% 0%, rgba(111, 211, 255, 0.08), transparent 60%), linear-gradient(180deg, var(--surface), rgba(12, 13, 16, 0.9)); }
+.imp-head { display: flex; align-items: center; gap: 9px; padding: 10px 0 8px; border-bottom: 1px solid var(--line); }
+.imp-head .eyebrow { color: var(--hud); }
+.imp-head .btn { margin-left: auto; }
+.imp-n { font: 500 10.5px/1 var(--mono); color: var(--ink-2); padding: 3px 6px; border-radius: 4px; background: var(--surface-3); }
+.imp-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.imp-row:last-child { border-bottom: 0; }
+.imp-ic { width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; color: var(--hud); background: rgba(111, 211, 255, 0.07); box-shadow: inset 0 0 0 1px var(--hud-line); flex: none; }
+.imp-ic svg { width: 18px; height: 18px; }
+.imp-t { min-width: 0; }
+.imp-t b { display: block; font-weight: 600; overflow-wrap: anywhere; }
+.imp-t span { display: block; color: var(--ink-2); font-size: 12.5px; margin-top: 2px; overflow-wrap: anywhere; }
+.imp-t small { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
+.imp-a { display: flex; gap: 4px; align-items: center; }
+.imp.compact { padding: 0 14px; }
+.imp.compact .imp-head { padding: 8px 0 6px; }
+.imp.compact .imp-row { padding: 9px 0; }
+.today-head + .imp, .alert + .imp { margin-top: 0; }
+@media (max-width: 560px) {
+  .imp-row { grid-template-columns: 38px minmax(0, 1fr); }
+  .imp-a { grid-column: 1 / -1; justify-content: flex-end; }
+}
+.community { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 16px 18px; margin-top: 22px; border-color: var(--hud-line); }
+@media (max-width: 560px) { .community { grid-template-columns: 38px minmax(0, 1fr); } .community .btn { grid-column: 1 / -1; justify-self: start; } }
+
+/* ==========================================================================
+   Grades
+   ========================================================================== */
+.gr-hud, .gr-top { position: relative; overflow: hidden; border-color: var(--hud-line); }
+.gr-hud::before, .gr-top::before { content: ""; position: absolute; inset: 8px; pointer-events: none; opacity: 0.55;
+  background: linear-gradient(var(--hud), var(--hud)) 0 0 / 12px 1px no-repeat, linear-gradient(var(--hud), var(--hud)) 0 0 / 1px 12px no-repeat,
+    linear-gradient(var(--hud), var(--hud)) 100% 100% / 12px 1px no-repeat, linear-gradient(var(--hud), var(--hud)) 100% 100% / 1px 12px no-repeat; }
+.gr-hud { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: center; padding: 22px 26px; margin: 0 0 18px;
+  background: radial-gradient(60% 140% at 0% 50%, rgba(111, 211, 255, 0.1), transparent 60%), linear-gradient(180deg, var(--surface), rgba(12, 13, 16, 0.9)); }
+.gr-gpa, .gt-ring, .gring { position: relative; flex: none; }
+.gr-gpa { width: 150px; height: 150px; }
+.gr-gpa .gv, .gt-ring .gv, .gring .gv { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; text-align: center; pointer-events: none; }
+.gr-gpa .gv b { font: 300 40px/1 var(--sans); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; text-shadow: 0 0 24px var(--hud-glow); }
+.gv span { font: 500 9.5px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+.gr-read { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.gr-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: rgba(5, 5, 6, 0.35); }
+.gr-tiles > div { padding: 10px 14px; border-left: 1px solid var(--line); min-width: 0; }
+.gr-tiles > div:first-child { border-left: 0; }
+.gr-tiles small { display: block; font: 500 9.5px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
+.gr-tiles b { display: block; font: 400 26px/1 var(--serif); margin-top: 8px; font-variant-numeric: tabular-nums; }
+.gr-alerts { display: flex; flex-direction: column; gap: 6px; }
+.gr-alert { display: flex; align-items: center; gap: 10px; text-align: left; font: inherit; font-size: 13px; color: var(--ink-2); background: rgba(255, 255, 255, 0.02); border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px; cursor: pointer; min-width: 0; }
+button.gr-alert:hover { border-color: var(--hud-line); background: var(--hud-soft); }
+.gr-alert i { width: 7px; height: 7px; border-radius: 50%; background: var(--hud); box-shadow: 0 0 8px var(--hud-glow); flex: none; }
+.gr-alert.warn i { background: var(--warn); box-shadow: 0 0 8px rgba(230, 179, 92, 0.7); }
+.gr-alert.bad i { background: var(--bad); box-shadow: 0 0 8px rgba(240, 122, 112, 0.7); }
+.gr-alert.ok { cursor: default; }
+.gr-alert.ok i { background: var(--good); box-shadow: 0 0 8px rgba(95, 199, 150, 0.7); }
+.gr-alert b { font: 500 11.5px var(--mono); letter-spacing: 0.04em; color: var(--ink); flex: none; }
+.gr-alert span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gr-alert svg { width: 14px; height: 14px; margin-left: auto; color: var(--muted); flex: none; }
+@media (max-width: 720px) {
+  .gr-hud { grid-template-columns: minmax(0, 1fr); justify-items: center; padding: 18px; gap: 18px; }
+  .gr-read { width: 100%; }
+  .gr-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .gr-tiles > div:nth-child(3) { border-left: 0; }
+  .gr-tiles > div:nth-child(n+3) { border-top: 1px solid var(--line); }
+  .gr-alert { align-items: flex-start; }
+  .gr-alert i { margin-top: 6px; }
+  .gr-alert span { white-space: normal; }
+}
+
+.gr-head-acts { display: flex; gap: 6px; flex-wrap: wrap; }
+.gr-sugg { margin-top: 22px; }
+.gr-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 14px; }
+.gr-grid.past { opacity: 0.72; }
+.gr-card { padding: 16px 18px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 10px; min-width: 0; position: relative; overflow: hidden;
+  background: radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--c, var(--hud)) 10%, transparent), transparent 55%), linear-gradient(90deg, transparent 3%, var(--hud-line) 20%, transparent 58%) top / 100% 1px no-repeat, linear-gradient(180deg, var(--surface), rgba(12, 13, 16, 0.86)); }
+.gr-card:hover { border-color: color-mix(in srgb, var(--c, var(--hud)) 40%, var(--line-strong)); transform: translateY(-1px); }
+.gr-card:focus-visible { outline: 2px solid var(--hud); outline-offset: 2px; }
+.gr-card .gh { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.gr-card .gn { font: 400 22px/1.15 var(--serif); overflow-wrap: anywhere; margin-top: -4px; }
+.gr-card .gm { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 16px; align-items: center; }
+.gring { width: 92px; height: 92px; }
+.gring .gv b, .gt-ring .gv b { font: 400 30px/1 var(--serif); }
+.gring .gv span { margin-top: 4px; letter-spacing: 0.04em; font-size: 10.5px; color: var(--ink-2); }
+.gst { font-size: 13px; color: var(--ink-2); line-height: 1.4; }
+.gst.hud { color: var(--hud); }
+.gst.warn { color: var(--warn); }
+.gst.bad { color: var(--bad); }
+.gst.good { color: var(--good); }
+.gr-range { margin-top: 20px; min-width: 0; }
+.gr-range .rb { position: relative; height: 6px; border-radius: 3px; background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.07) 0 1px, transparent 1px 10%), var(--surface-3); }
+.gr-range .band { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: linear-gradient(90deg, rgba(111, 211, 255, 0.22), rgba(111, 211, 255, 0.5)); }
+.gr-range .now { position: absolute; top: -4px; width: 2px; height: 14px; margin-left: -1px; background: #fff; box-shadow: 0 0 8px var(--hud); border-radius: 1px; }
+.gr-range .tgt { position: absolute; top: -4px; height: 14px; border-left: 1.5px dashed var(--warn); }
+.gr-range .tgt em { position: absolute; top: -14px; left: 0; transform: translateX(-50%); font: 500 9.5px/1 var(--mono); font-style: normal; color: var(--warn); white-space: nowrap; }
+.gr-range .rl { display: flex; justify-content: space-between; gap: 8px; margin-top: 7px; font: 500 10px/1 var(--mono); color: var(--faint); }
+.gr-range .rl span:nth-child(2) { text-transform: uppercase; letter-spacing: 0.1em; font-size: 9px; text-align: center; }
+.gr-cats { display: flex; gap: 5px; }
+.gc { min-width: 0; }
+.gc i { display: block; height: 4px; border-radius: 2px; background: var(--surface-3); overflow: hidden; }
+.gc i b { display: block; height: 100%; background: linear-gradient(90deg, var(--hud-2), var(--hud)); box-shadow: 0 0 6px var(--hud-glow); }
+.gc span { display: block; font-size: 11px; color: var(--muted); margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gc em { display: block; font: 500 10px/1 var(--mono); font-style: normal; color: var(--faint); margin-top: 2px; }
+.gr-nocat { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); padding: 8px 10px; border: 1px dashed var(--line-strong); border-radius: 8px; }
+.gr-nocat svg { width: 14px; height: 14px; color: var(--hud); flex: none; }
+.gr-card .gf { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); padding-top: 10px; min-height: 38px; }
+.gnext { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--ink-2); min-width: 0; }
+.gnext > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gnext svg { width: 13px; height: 13px; color: var(--hud); flex: none; }
+.gr-spark { flex: none; overflow: visible; }
+.gr-spark polyline { fill: none; stroke: var(--hud); stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; filter: drop-shadow(0 0 3px var(--hud-glow)); }
+.gr-spark circle { fill: #fff; stroke: var(--hud); stroke-width: 1; }
+
+.gr-top { display: grid; grid-template-columns: 170px minmax(0, 1fr) auto; gap: 26px; align-items: center; padding: 22px 26px;
+  background: radial-gradient(70% 140% at 0% 50%, color-mix(in srgb, var(--c, var(--hud)) 12%, transparent), transparent 60%), linear-gradient(180deg, var(--surface), rgba(12, 13, 16, 0.9)); }
+.gt-ring { width: 170px; height: 170px; }
+.gt-ring .gv b { font-size: 46px; text-shadow: 0 0 24px rgba(111, 211, 255, 0.35); }
+.gt-ring .gv span { font-size: 12px; color: var(--ink-2); letter-spacing: 0.08em; }
+.gt-main { min-width: 0; }
+.gt-code { display: flex; gap: 8px; align-items: center; }
+.gt-main h2 { margin: 8px 0 6px; font: 400 36px/1.05 var(--serif); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+.gt-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--muted); }
+.gt-target { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin-top: 14px; }
+.gt-target label { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.gt-target select { font: inherit; font-size: 13px; padding: 5px 9px; border-radius: 7px; border: 1px solid var(--hud-line); background: var(--surface); color: var(--ink); }
+.gt-acts { display: flex; flex-direction: column; gap: 6px; align-self: start; position: relative; z-index: 1; }
+@media (max-width: 980px) {
+  .gr-top { grid-template-columns: 130px minmax(0, 1fr); }
+  .gt-ring { width: 130px; height: 130px; }
+  .gt-ring .gv b { font-size: 36px; }
+  .gt-acts { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; }
+}
+@media (max-width: 560px) {
+  .gr-top { grid-template-columns: minmax(0, 1fr); padding: 18px; gap: 16px; }
+  .gt-main h2 { font-size: 28px; }
+}
+.gr-whatif { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 12px 18px; margin-top: 12px; font-size: 13.5px; color: var(--ink-2); border-color: var(--hud-line); }
+.gr-whatif .eyebrow { color: var(--hud); margin-right: 4px; }
+.gr-whatif input[type=range] { flex: 1 1 160px; accent-color: var(--hud); min-width: 120px; }
+.gr-whatif b { font: 500 14px var(--mono); color: var(--ink); font-variant-numeric: tabular-nums; }
+.gr-whatif .wi-f { color: var(--hud); text-shadow: 0 0 12px var(--hud-glow); }
+.gr-cols > div > .section-head:first-child { margin-top: 34px; }
+.gr-row .amt { display: flex; flex-direction: column; align-items: flex-end; }
+.gr-row .amt small { color: var(--muted); }
+.gr-bar { display: block; width: 84px; height: 3px; border-radius: 2px; background: var(--surface-3); margin-top: 7px; overflow: hidden; }
+.gr-bar i { display: block; height: 100%; border-radius: 2px; }
+.gr-ktable { border-top: 1px solid var(--ink); }
+.gk { display: grid; grid-template-columns: minmax(0, 1fr) 52px 62px; gap: 6px 12px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.gk-n b { display: block; font-weight: 550; overflow-wrap: anywhere; }
+.gk-n span { color: var(--muted); font-size: 12px; }
+.gk-w { font: 500 12px var(--mono); color: var(--muted); text-align: right; }
+.gk-p { font: 400 20px/1 var(--serif); text-align: right; font-variant-numeric: tabular-nums; }
+.gk-bar { grid-column: 1 / -1; height: 3px; border-radius: 2px; background: var(--surface-3); overflow: hidden; }
+.gk-bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--hud-2), var(--hud)); box-shadow: 0 0 6px var(--hud-glow); }
+.gr-scale { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.gr-scale span { font: 500 11px/1 var(--mono); color: var(--muted); padding: 5px 7px; border: 1px solid var(--line); border-radius: 5px; }
+.gr-scale b { color: var(--ink); margin-right: 5px; }
+.gr-kform { padding: 16px 18px; margin: 12px 0 14px; display: flex; flex-direction: column; gap: 8px; }
+.gr-kform .form-title { font: 400 22px/1 var(--serif); margin-bottom: 4px; }
+.gk-edit { display: grid; grid-template-columns: minmax(0, 1fr) 88px 84px 84px 32px; gap: 8px; align-items: center; }
+.gk-edit input { font: inherit; font-size: 13.5px; padding: 7px 10px; border-radius: 7px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); min-width: 0; width: 100%; }
+.gk-edit input:focus-visible { outline: 2px solid var(--hud); outline-offset: 1px; }
+.gk-labels span { font: 500 10px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); }
+.gk-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.gk-total { font: 500 12.5px var(--mono); color: var(--good); }
+.gk-total.off { color: var(--warn); }
+.gr-kform .form-acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+.gr-kform .hint { font-size: 11.5px; color: var(--faint); }
+.gr-form label.wide { grid-column: 1 / -1; }
+@media (max-width: 560px) {
+  .gk-edit { grid-template-columns: minmax(0, 1fr) 54px 50px 50px 26px; gap: 5px; }
+  .gk-edit input { padding: 7px 6px; }
+  .gk-labels span { letter-spacing: 0.02em; font-size: 9px; }
+}
+.gr-hint { display: flex; gap: 8px; align-items: flex-start; color: var(--muted); }
+.gr-hint svg { width: 14px; height: 14px; color: var(--warn); flex: none; margin-top: 2px; }
+.brand small { white-space: nowrap; letter-spacing: 0.09em; }
+
+/* Files: a syllabus's grading breakdown, and scores read from a grades page */
+.gr-found { margin-top: 16px; padding: 16px 18px; border-color: var(--hud-line);
+  background: radial-gradient(80% 140% at 0% 0%, rgba(111, 211, 255, 0.08), transparent 60%), linear-gradient(180deg, var(--surface), rgba(12, 13, 16, 0.9)); }
+.gf-top { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.gf-t { min-width: 0; }
+.gf-t .eyebrow { color: var(--hud); }
+.gf-t b { display: block; font: 400 22px/1.15 var(--serif); margin-top: 4px; overflow-wrap: anywhere; }
+.gf-t span { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.gf-bars { display: flex; gap: 5px; margin-top: 14px; }
+.gf-k { min-width: 0; }
+.gf-k i { display: block; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--hud-2), var(--hud)); box-shadow: 0 0 8px var(--hud-glow); opacity: 0.9; }
+.gf-k:nth-child(2n) i { opacity: 0.5; }
+.gf-k b { display: block; font-size: 12.5px; font-weight: 550; margin-top: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gf-k span { display: block; font: 500 11px var(--mono); color: var(--muted); }
+@media (max-width: 560px) {
+  .gf-top { grid-template-columns: 38px minmax(0, 1fr); }
+  .gf-top .btn { grid-column: 1 / -1; justify-self: start; }
+  .gf-bars { flex-wrap: wrap; }
+  .gf-k { flex: 1 1 40% !important; }
+}
+.sugg .fields .scoreof { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.sugg .fields .scoreof span { color: var(--muted); font-size: 12px; }
+
+/* ==========================================================================
+   Setup: Google sign-in step by step, what connecting looks like, and letting
+   a phone in with one button
+   ========================================================================== */
+.gsetup { padding: 20px 22px 14px; margin: 0 0 16px; border-color: var(--hud-line); }
+.gs-head { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 14px; align-items: start; }
+.gs-logo { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.04); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.gs-head h3 { margin: 6px 0 4px; font: 400 28px/1.05 var(--serif); }
+.gs-head p { margin: 0; color: var(--muted); font-size: 13px; max-width: 70ch; }
+.gs-progress { display: flex; align-items: center; gap: 12px; margin: 16px 0 4px; font: 500 10.5px/1 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.gs-progress .meter { flex: 1; }
+.gs-steps { list-style: none; margin: 0; padding: 0; }
+.gs-step { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 13px 0; border-top: 1px solid var(--line); }
+.gs-step:first-child { border-top: 0; }
+.gs-tick { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; padding: 0; font: 400 16px/1 var(--serif); color: var(--muted); background: transparent; border: 1.5px solid var(--line-strong); cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+button.gs-tick:hover:not(:disabled) { border-color: var(--hud); color: var(--ink); }
+.gs-tick svg { width: 13px; height: 13px; }
+.gs-step.done .gs-tick { background: var(--good-soft); border-color: color-mix(in srgb, var(--good) 55%, transparent); color: var(--good); }
+.gs-step.next .gs-tick { border-color: var(--hud); color: var(--hud); box-shadow: 0 0 0 4px rgba(111, 211, 255, 0.08), 0 0 14px -2px var(--hud-glow); }
+.gs-tick:disabled { cursor: default; }
+.gs-body { min-width: 0; }
+.gs-body > b { display: block; font-weight: 600; }
+.gs-step a.btn, .gs-done .btn, .phone-open a.btn { text-decoration: none; }
+.gs-step.done .gs-body > b { color: var(--ink-2); }
+.gs-body > span { display: block; color: var(--ink-2); font-size: 13px; margin-top: 2px; }
+.gs-body > span b { color: var(--ink); font-weight: 600; }
+.gs-step.done .gs-body > span { color: var(--muted); }
+.gs-body > small { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
+.gs-body small.err { color: var(--bad); }
+.gs-body small.err .btn { margin: 4px 4px 0 0; }
+.gs-step > .btn { justify-self: end; }
+.gs-step.next { background: linear-gradient(90deg, rgba(111, 211, 255, 0.06), transparent 70%); margin: 0 -22px; padding-left: 22px; padding-right: 22px; }
+.gs-foot { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 12px; color: var(--ink-2); font-size: 13px; }
+@media (max-width: 640px) {
+  .gs-step { grid-template-columns: 34px minmax(0, 1fr); }
+  .gs-step > .btn { grid-column: 2; justify-self: start; }
+  .gs-step.next { margin: 0 -18px; padding-left: 18px; padding-right: 18px; }
+  .gsetup { padding: 18px 18px 12px; }
+}
+.gs-done { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px 18px; }
+.gs-done > svg { width: 18px; height: 18px; color: var(--good); }
+.gs-done > div > b { display: block; }
+.gs-done > div > span { color: var(--muted); font-size: 12.5px; }
+
+.gconnect { padding: 16px 20px; margin: 0 0 4px; }
+.gconnect .eyebrow { color: var(--hud); }
+.gc-steps { margin: 10px 0 8px; padding-left: 20px; color: var(--ink-2); font-size: 13.5px; }
+.gc-steps li { margin: 0 0 7px; padding-left: 4px; }
+.gc-steps li::marker { color: var(--hud); font: 500 12px var(--mono); }
+.gconnect p { margin: 0; font-size: 12.5px; }
+
+.phone-open { padding: 14px 16px; margin: 10px 0 4px; border-color: var(--hud-line); }
+.po-head { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.po-head > svg { width: 18px; height: 18px; color: var(--hud); }
+.po-head > div > b { display: block; color: var(--ink); font-weight: 600; }
+.po-head > div > span { color: var(--muted); font-size: 12.5px; }
+.po-acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.po-token { margin-top: 12px; font-size: 12.5px; color: var(--ink-2); }
+.po-token .cmd code { font-size: 15px; letter-spacing: 0.06em; color: var(--hud); }
+@media (max-width: 640px) {
+  .po-head { grid-template-columns: 20px minmax(0, 1fr); }
+  .po-head > .btn, .po-acts { grid-column: 2; justify-content: flex-start; }
+}
+.by-hand { margin-top: 12px; }
+.by-hand summary { cursor: pointer; color: var(--muted); font-size: 12.5px; list-style: none; display: inline-flex; gap: 6px; align-items: center; }
+.by-hand summary::-webkit-details-marker { display: none; }
+.by-hand summary::before { content: "+"; color: var(--hud); font: 400 15px/1 var(--mono); }
+.by-hand[open] summary::before { content: "−"; }
+.by-hand > div { margin-top: 8px; }
+
+/* ==========================================================================
+   Your Mellow account: the sign-in screen, and the card on Accounts
+   ========================================================================== */
+.auth-screen { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 24px calc(18px + env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) calc(18px + env(safe-area-inset-left));
+  background: radial-gradient(900px 500px at 70% -10%, rgba(47, 107, 255, 0.22), transparent 62%), rgba(5, 5, 6, 0.97); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); overflow-y: auto; }
+body.auth-open { overflow: hidden; }
+.auth-card { width: min(420px, 100%); padding: 26px 26px 22px; border-color: var(--hud-line); }
+.auth-brand { display: flex; align-items: center; gap: 18px; padding-left: 8px; }
+.auth-brand b { display: block; font: 400 30px/0.9 var(--serif); }
+.auth-brand b::after { content: "."; color: var(--accent); }
+.auth-brand small { display: block; margin-top: 7px; color: var(--hud); }
+.auth-say { color: var(--ink-2); font-size: 13.5px; margin: 18px 0 16px; }
+.auth-form { display: flex; flex-direction: column; gap: 12px; }
+.auth-form label { display: flex; flex-direction: column; gap: 5px; font-size: 12px; color: var(--muted); }
+.auth-form input { font: inherit; font-size: 15px; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+.auth-form input:focus-visible { outline: 2px solid var(--hud); outline-offset: 1px; }
+.auth-form .btn { margin-top: 4px; justify-content: center; padding: 11px 16px; font-size: 14.5px; }
+.auth-form .err { margin: 0; }
+.auth-foot { display: block; margin-top: 16px; color: var(--faint); font-size: 12px; line-height: 1.5; }
+
+.acct-make { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 16px 18px; border-color: var(--hud-line); }
+.am-i { width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; color: var(--hud); background: rgba(111, 211, 255, 0.07); box-shadow: inset 0 0 0 1px var(--hud-line); }
+.am-i svg { width: 19px; height: 19px; }
+.am-t b { display: block; font-weight: 600; }
+.am-t span { display: block; color: var(--ink-2); font-size: 12.5px; margin-top: 3px; }
+@media (max-width: 640px) { .acct-make { grid-template-columns: 42px minmax(0, 1fr); } .acct-make .btn { grid-column: 2; justify-self: start; } }
+
+.devices { border-top: 1px solid var(--line); }
+.device-row { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 11px 0; border-top: 1px solid var(--line); }
+.device-row:first-child { border-top: 0; }
+.dv-i { color: var(--muted); display: grid; place-items: center; }
+.dv-i svg { width: 16px; height: 16px; }
+.device-row b { display: block; font-weight: 550; font-size: 13.5px; }
+.device-row span { color: var(--muted); font-size: 12px; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
@@ -2127,7 +2540,7 @@ body.panel-open .org-fab { display: none; }
 <div class="shell">
   <aside class="side" id="side">
     <div class="brand">
-      <span class="logo-mark" aria-hidden="true"><svg viewBox="0 0 100 100"><defs><linearGradient id="lm-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6aa6ff"/><stop offset=".55" stop-color="#2f6bff"/><stop offset="1" stop-color="#1745c9"/></linearGradient></defs><rect width="100" height="100" rx="26" fill="url(#lm-g)"/><rect x="1.5" y="1.5" width="97" height="97" rx="24.5" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="3"/><path d="M28 66V47a11 11 0 0 1 22 0v19M50 47a11 11 0 0 1 22 0v19" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+      <span class="reactor" aria-hidden="true"><span class="logo-mark"><svg viewBox="0 0 100 100"><defs><linearGradient id="lm-g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6aa6ff"/><stop offset=".55" stop-color="#2f6bff"/><stop offset="1" stop-color="#1745c9"/></linearGradient></defs><rect width="100" height="100" rx="26" fill="url(#lm-g)"/><rect x="1.5" y="1.5" width="97" height="97" rx="24.5" fill="none" stroke="#fff" stroke-opacity=".22" stroke-width="3"/><path d="M28 66V47a11 11 0 0 1 22 0v19M50 47a11 11 0 0 1 22 0v19" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>
       <div><b>Mellow</b><small class="eyebrow">Calm. Focused. Done.</small></div>
     </div>
     <nav class="nav" id="nav"></nav>
@@ -2211,13 +2624,15 @@ var I = {
   brain: svg('<path d="M9 4a3 3 0 0 0-3 3v.3A3 3 0 0 0 4 10a3 3 0 0 0 1 2.2A3 3 0 0 0 6 17a3 3 0 0 0 3 3h.5V4H9Z"/><path d="M15 4a3 3 0 0 1 3 3v.3A3 3 0 0 1 20 10a3 3 0 0 1-1 2.2A3 3 0 0 1 18 17a3 3 0 0 1-3 3h-.5V4H15Z"/>'),
   skip: svg('<path d="M5 5l9 7-9 7V5ZM18 5v14"/>'),
   mic: svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>'),
-  heart: svg('<path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20Z"/>')
+  heart: svg('<path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20Z"/>'),
+  grade: svg('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/><path d="m8.5 17.5 2.3-6.5 2.3 6.5M9.3 15.4h3"/><path d="M15.5 12.5v3M14 14h3"/>')
 };
 
 var TABS = [
   { id: 'today', name: 'Today', icon: I.calendar, key: '1' },
   { id: 'focus', name: 'ADHD tools', short: 'Tools', icon: I.target, key: '2' },
   { id: 'tasks', name: 'Tasks', icon: I.tasks, key: '3' },
+  { id: 'grades', name: 'Grades', icon: I.grade, key: 'R' },
   { id: 'news', name: 'News', icon: I.news, key: '4' },
   { id: 'finance', name: 'Finance', icon: I.money, key: '5' },
   { id: 'health', name: 'Health', icon: I.heart, key: 'H' },
@@ -2260,16 +2675,27 @@ function esc(s) {
 function getToken() { try { return localStorage.getItem('ratchet-token') || ''; } catch (e) { return ''; } }
 function setToken(v) { try { v ? localStorage.setItem('ratchet-token', v) : localStorage.removeItem('ratchet-token'); } catch (e) {} }
 
-function getJson(path) { return fetch(path, { cache: 'no-store' }).then(function (r) { return r.json(); }); }
+function getJson(path) {
+  return fetch(path, { cache: 'no-store', headers: authHeaders() }).then(function (r) {
+    if (r.status === 401) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (j && j.signIn) askSignIn();
+        throw new Error('sign in');
+      });
+    }
+    return r.json();
+  });
+}
 
 function post(path, payload) {
-  var headers = { 'Content-Type': 'application/json' };
-  var token = getToken();
-  if (token) headers['X-Ratchet-Token'] = token;
+  var headers = authHeaders({ 'Content-Type': 'application/json' });
   return fetch(path, { method: 'POST', headers: headers, body: JSON.stringify(payload || {}) })
     .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, status: r.status, body: j }; }); })
     .then(function (res) {
       if (res.status !== 401) return res;
+      // Signing in is its own screen; a sign-in that fails must not turn into a token box.
+      if (/^\/api\/account\//.test(path)) return res;
+      if (res.body && res.body.signIn) { askSignIn(); return res; }
       var entered = window.prompt('This device needs the engine token before it can make changes.\n\nIt is in engine-config.json on the PC, under "token".');
       if (!entered) return res;
       setToken(entered.trim());
@@ -2299,7 +2725,9 @@ function refresh() {
     if (tab === 'finance' || Date.now() - finAt > 5 * 60000) refreshFinance();
     if (Date.now() - finBriefAt > 15 * 60000) refreshFinBrief(false);
     if (tab === 'health' && Date.now() - hx.at > 60000) refreshHealth();
+    if (tab === 'grades' && Date.now() - gr.at > 60000) refreshGrades();
   }).catch(function () {
+    if (acct.view) return;
     problem('Mellow isn\'t responding', 'Nothing is answering on this port. It usually starts with Windows; check the Ratchet-Engine task, or run <code>node engine/engine.js</code>.');
   });
 }
@@ -2448,7 +2876,7 @@ function blockingAlertHtml() {
 }
 
 function pageHead(eyebrow, title, subtitle) {
-  return '<div class="page-head enter"><div class="eyebrow">' + eyebrow + '</div><h1>' + title + '</h1>' + (subtitle ? '<p>' + subtitle + '</p>' : '') + '</div>';
+  return '<div class="page-head enter">' + hudBar(tab) + '<div class="eyebrow">' + eyebrow + '</div><h1>' + title + '</h1>' + (subtitle ? '<p>' + subtitle + '</p>' : '') + '</div>';
 }
 
 /* ============================================================================
@@ -2639,7 +3067,7 @@ function viewToday() {
   var items = itemsOn(viewDay);
   var schedule = items.filter(onSchedule), due = items.filter(function (it) { return !onSchedule(it); });
 
-  var html = '<div class="today-head enter"><div style="min-width:0">' +
+  var html = '<div class="today-head enter">' + hudBar('today') + '<div style="min-width:0">' +
     '<div class="eyebrow">' + esc(date.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })) + '</div>' +
     '<h1>' + (isToday ? greeting() + name + '.' : esc(relDay(date.toISOString()))) + '</h1>' +
     '<p class="quip">' + (isToday ? quip() : esc(daySummary(items)) + '. <button class="btn ghost sm" data-day="' + todayKey + '">Back to today</button>') + '</p></div>' +
@@ -2658,6 +3086,7 @@ function viewToday() {
       '<div style="margin-top:16px"><button class="btn primary" data-go="accounts">Connect accounts</button></div>');
   }
 
+  if (isToday) html += importSuggestHtml('all', { max: 1, compact: true, maxRank: 1, title: 'Worth importing' });
   html += viewBarHtml();
   if (calView === 'week') return html + weekHtml();
   if (calView === 'month') return html + monthHtml();
@@ -3027,17 +3456,13 @@ function switchHtml(a, flag, label) {
 
 function viewAccounts() {
   var g = google || { client: { ok: false }, accounts: [] };
-  var html = pageHead('Connections', 'Accounts', 'Where your calendar, homework and email come from.');
+  var html = pageHead('Connections', 'Accounts', 'Your Mellow account, and where your calendar, homework and email come from.');
+  html += '<div class="section-head" style="margin-top:26px"><h2>Google accounts</h2><span class="sub">Connect as many as you like: school, personal, a club one. Google asks which account each time.</span></div>';
 
-  if (!g.client.ok) {
-    html += '<div class="card enter" style="padding:22px 24px">' +
-      '<div class="eyebrow">One-time setup</div><div class="serif" style="font-size:26px;margin:6px 0 4px;display:flex;align-items:center;gap:10px">' + mark('google', 'lg') + 'Connect Google</div>' +
-      '<div class="muted">About fifteen minutes, once, for all your accounts. <button class="btn ghost sm" data-go="guide">Step-by-step guide</button></div>' +
-      '<ol class="steps"><li>Create a project at <b>console.cloud.google.com</b></li><li>Turn on the <b>Gmail API</b> and <b>Google Calendar API</b></li>' +
-      '<li>Set up the sign-in screen and add both addresses as test users</li><li>Create a <b>Desktop app</b> client and download its file</li>' +
-      '<li>Move that file into ' + enginePath('') + ' and reload</li></ol>' +
-      (g.client.error ? '<div class="err">' + esc(g.client.error) + '</div>' : '') + '</div>';
-  }
+  html += accountCardHtml();
+
+  var sharedClient = !!(g.client.ok && g.client.shared);
+  if (!g.client.ok || gsetupOwn) html += googleSetupHtml('accounts');
 
   if (g.accounts.length) {
     html += '<div style="display:grid;gap:10px">' + g.accounts.map(function (a) {
@@ -3058,23 +3483,26 @@ function viewAccounts() {
         (a.lastError ? '<div class="err" style="margin:0">' + esc(a.lastError) + '</div>' : '') +
         '<div class="muted" style="font-size:12.5px;display:flex;gap:14px;flex-wrap:wrap;align-items:center">' + (a.replies || a.homework || a.events ? '<span style="display:inline-flex;gap:6px;align-items:center">' + mark('gmail') + 'Gmail</span>' : '') + (a.calendar ? '<span style="display:inline-flex;gap:6px;align-items:center">' + mark('google-calendar') + 'Google Calendar</span>' : '') + '</div>' +
         '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+          accountFixHtml(a, g) +
           (a.needsReconnect ? '<button class="btn primary sm" data-connect="' + esc(a.role) + '">Reconnect</button>' : '') +
           '<button class="btn ghost sm" data-disconnect="' + esc(a.email) + '">Disconnect</button>' +
         '</div>' +
       '</div>';
     }).join('') + '</div>';
   } else if (g.client.ok) {
-    html += emptyHtml(I.link, 'No accounts connected yet', 'Connect your school account first. That\'s where homework comes from.');
+    html += googleConnectHelpHtml(sharedClient);
   }
 
   if (g.client.ok) {
     var roles = g.accounts.map(function (a) { return a.role; });
+    var some = g.accounts.length > 0;
     html += '<div class="connect-row">' +
-      (roles.indexOf('school') === -1 ? '<button class="btn primary" data-connect="school">' + mark('google') + ' Connect school account</button>' : '') +
-      (roles.indexOf('personal') === -1 ? '<button class="btn' + (roles.indexOf('school') !== -1 ? ' primary' : '') + '" data-connect="personal">' + mark('google') + ' Connect personal account</button>' : '') +
+      '<button class="btn' + (roles.indexOf('school') === -1 ? ' primary' : '') + '" data-connect="school">' + mark('google') + (roles.indexOf('school') === -1 ? ' Connect school account' : ' Add another school account') + '</button>' +
+      '<button class="btn' + (some && roles.indexOf('personal') === -1 ? ' primary' : '') + '" data-connect="personal">' + mark('google') + (roles.indexOf('personal') === -1 ? ' Connect personal account' : ' Add another personal account') + '</button>' +
       (g.accounts.length ? '<button class="btn" data-sync="1"' + (g.syncing ? ' disabled' : '') + '>' + I.sync + ' ' + (g.syncing ? 'Syncing…' : 'Sync now') + '</button>' : '') +
     '</div>' +
-    '<p class="muted" style="font-size:12.5px;margin-top:16px;display:flex;gap:8px;align-items:center"><span style="width:14px;display:inline-grid">' + I.lock + '</span>Read-only. Mellow can read mail and calendars, and can\'t send, delete or change anything. It checks every ' + esc(g.everyMinutes) + ' minutes.</p>';
+    '<p class="muted" style="font-size:12.5px;margin-top:16px;display:flex;gap:8px;align-items:center"><span style="width:14px;display:inline-grid">' + I.lock + '</span>Read-only. Mellow can read mail and calendars, and can\'t send, delete or change anything. It checks every ' + esc(g.everyMinutes) + ' minutes. ' +
+      (isOnComputer() ? '<button class="link-inline" data-gsetup-own="1">' + (gsetupOwn ? 'Hide the setup steps' : sharedClient ? 'Use your own Google Cloud client instead' : 'Change the sign-in client') + '</button>' : '') + '</p>';
   }
 
   if (errors._accounts) html += '<div class="err">' + esc(errors._accounts) + '</div>';
@@ -6766,10 +7194,8 @@ function viewSleep() {
    Reading what only this PC and devices with the token may read
    ============================================================================ */
 function authGet(path) {
-  var headers = {};
-  var token = getToken();
-  if (token) headers['X-Ratchet-Token'] = token;
-  return fetch(path, { cache: 'no-store', headers: headers }).then(function (r) {
+  return fetch(path, { cache: 'no-store', headers: authHeaders() }).then(function (r) {
+    if (r.status === 401 && acct.info && acct.info.exists) { askSignIn(); return { _status: 401 }; }
     if (r.status === 401 && !authGet.asked) {
       authGet.asked = true;
       var entered = window.prompt('This device needs the engine token to open this.\n\nIt is in engine-config.json on the PC, under "token".');
@@ -7006,8 +7432,16 @@ function uploadOne(file, section) {
   });
 }
 
-/** Upload, then let the scan run. On the Files page the file opens; elsewhere a toast offers to. */
+/** A Google sign-in client file goes to Accounts; everything else is filed. */
 function scanFiles(files, section) {
+  return splitGoogleClients(files).then(function (split) {
+    split.clients.forEach(uploadGoogleClient);
+    if (split.rest.length) return scanFilesNow(split.rest, section);
+  });
+}
+
+/** Upload, then let the scan run. On the Files page the file opens; elsewhere a toast offers to. */
+function scanFilesNow(files, section) {
   toast('Filing ' + (files.length === 1 ? files[0].name : files.length + ' files') + '…');
   return files.reduce(function (p, f) {
     return p.then(function (firstId) {
@@ -7068,7 +7502,7 @@ function announceScan(d) {
   var open = openSuggestions(d).length;
   var where = folderName(d.folder);
   var text = d.status === 'ready'
-    ? (d.title || d.name) + ' is in ' + where + (open ? '. ' + plural(open, 'suggestion') + ' to review.' : '.')
+    ? (d.title || d.name) + ' is in ' + where + (open ? '. ' + plural(open, 'suggestion') + ' to review.' : '.') + (d.grading && !d.gradingAdded ? ' Its grading breakdown is ready for Grades.' : '')
     : 'Couldn\'t read ' + d.name + '.';
   toast(text, 'Open', function () { dropSel = d.id; switchTab('files'); });
 }
@@ -7087,6 +7521,11 @@ function folderName(id) { var f = folders().filter(function (x) { return x.id ==
 /** Suggestions still worth a decision: not added, and not already in Mellow. */
 function openSuggestions(d) {
   return d && d.status === 'ready' ? (d.items || []).filter(function (x) { return !x.added && !x.existing; }) : [];
+}
+
+/** Grading breakdowns found in Files that aren't in Grades yet. */
+function gradingWaiting() {
+  return (dropsList || []).filter(function (d) { return d.status === 'ready' && d.grading && !d.gradingAdded; }).length;
 }
 
 function filesToReview() {
@@ -7128,8 +7567,9 @@ function viewFiles() {
   if (!sel) {
     html += '<div class="card dropzone enter" data-scan-file="files" role="button" tabindex="0" id="dropzone">' +
       '<div class="dz-ico">' + I.upload + '</div>' +
-      '<div class="dz-txt"><b>Drop files here</b><span>Or anywhere in Mellow. PDFs, photos, Word documents, text, .ics calendars and bank .csv exports.</span></div>' +
+      '<div class="dz-txt"><b>Drop files here</b><span>Or anywhere in Mellow. Syllabi, grades pages, PDFs, photos, Word documents, .ics calendars and bank .csv exports.</span></div>' +
       '<button class="btn primary">Choose files</button></div>';
+    if (dropsList) html += importSuggestHtml('all', { max: 6, title: 'Mellow suggests importing' });
   }
 
   if (!dropsList) return html + '<div class="thinking"><span class="spin-dot"></span>Opening your files…</div>';
@@ -7194,9 +7634,27 @@ function fileRowHtml(d) {
   }
 }
 
-var KIND_LABELS = { event: 'Event', class: 'Class', deadline: 'Deadline', exam: 'Exam', task: 'To-do', bill: 'Bill', payday: 'Payday', transaction: 'Transaction', credit_card: 'Credit card', holding: 'Holding', subscription: 'Subscription' };
+var KIND_LABELS = { event: 'Event', class: 'Class', deadline: 'Deadline', exam: 'Exam', task: 'To-do', bill: 'Bill', payday: 'Payday', transaction: 'Transaction', credit_card: 'Credit card', holding: 'Holding', subscription: 'Subscription', grade: 'Score' };
 var DOW_NAMES = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' };
-var EXISTING_LABELS = { calendar: 'Already on your calendar', deadline: 'Already a deadline', finance: 'Already in Finance' };
+var EXISTING_LABELS = { calendar: 'Already on your calendar', deadline: 'Already a deadline', finance: 'Already in Finance', grades: 'Already in Grades' };
+
+/** A syllabus's grading breakdown as the scan read it, with the button that puts it in Grades. */
+function gradingFoundHtml(d) {
+  var g = d.grading;
+  if (!g || !g.categories || !g.categories.length) return '';
+  var total = g.total != null ? g.total : g.categories.reduce(function (a, k) { return a + k.weight; }, 0);
+  var who = [g.courseName, g.instructor, g.credits ? plural(g.credits, 'credit') : ''].filter(Boolean).join(' · ');
+  return '<div class="card gr-found enter"><div class="gf-top"><span class="imp-ic">' + I.grade + '</span>' +
+      '<div class="gf-t"><div class="eyebrow">Grading breakdown found</div><b>How ' + esc(g.course || g.courseName || 'this course') + ' is graded</b>' + (who ? '<span>' + esc(who) + '</span>' : '') + '</div>' +
+      (d.gradingAdded ? '<button class="btn sm" data-gr-go="' + esc(d.gradingAdded) + '">' + I.check + ' In Grades</button>'
+        : '<button class="btn primary sm" data-gr-from-file="' + esc(d.id) + '">' + I.plus + ' Add to Grades</button>') + '</div>' +
+    '<div class="gf-bars">' + g.categories.map(function (k) {
+      return '<div class="gf-k" style="flex:' + Math.max(8, k.weight) + ' 1 0"><i></i><b>' + esc(k.name) + '</b><span>' + k.weight + '%' + (k.count ? ' · ' + k.count : '') + (k.drop ? ' · drops ' + k.drop : '') + '</span></div>';
+    }).join('') + '</div>' +
+    (g.scale && g.scale.length ? '<div class="gr-scale">' + g.scale.filter(function (r) { return r.letter !== 'F'; }).map(function (r) { return '<span><b>' + esc(r.letter) + '</b>' + r.min + '</span>'; }).join('') + '</div>' : '') +
+    (Math.abs(total - 100) > 0.5 ? '<div class="quiet-note">These add up to ' + total + '%, not 100%. Check them on Grades after adding.</div>' : '') +
+  '</div>';
+}
 
 function fileDetailHtml(d) {
   var back = filesFolder === 'review' ? 'To review' : filesFolder === 'all' ? 'All files' : folderName(filesFolder);
@@ -7226,6 +7684,7 @@ function fileDetailHtml(d) {
 
   if (d.summary) html += '<p class="file-sum">' + esc(d.summary) + '</p>';
   if (d.highlights && d.highlights.length) html += '<ul class="file-hl">' + d.highlights.map(function (h) { return '<li>' + esc(h) + '</li>'; }).join('') + '</ul>';
+  if (d.grading) html += gradingFoundHtml(d);
 
   var items = d.items || [];
   var open = openSuggestions(d);
@@ -7257,11 +7716,12 @@ function fileDetailHtml(d) {
           (timed ? '<input type="time" id="fs-' + esc(x.id) + '" value="' + esc(x.startTime || '') + '"' + dis + ' title="' + (x.kind === 'deadline' ? 'Due at (empty: end of day)' : 'Starts') + '">' : '') +
           (x.kind === 'event' || x.kind === 'class' ? '<input type="time" id="fe-' + esc(x.id) + '" value="' + esc(x.endTime || '') + '"' + dis + ' title="Ends">' : '') +
           (money ? '<input inputmode="decimal" id="fa-' + esc(x.id) + '" value="' + esc(x.amount == null ? '' : x.amount) + '"' + dis + ' title="' + (holding ? 'Shares' : 'Amount') + '">' : '') +
+          (x.kind === 'grade' ? '<span class="scoreof"><input inputmode="decimal" id="fa-' + esc(x.id) + '" value="' + esc(x.amount == null ? '' : x.amount) + '"' + dis + ' title="Score"><span>of</span><input inputmode="decimal" id="fo-' + esc(x.id) + '" value="' + esc(x.outOf == null ? '' : x.outOf) + '"' + dis + ' title="Out of"></span>' : '') +
         '</div>' +
         '<div class="meta"><span class="tag">' + esc(KIND_LABELS[x.kind] || x.kind) + '</span>' +
           (x.pending ? '<span class="tag">Pending</span>' : '') +
           (holding ? '<span>' + esc(x.notes || '') + (x.costBasis != null ? ' · paid ' + cash(x.costBasis) : '') + '</span>' : '') +
-          (x.course ? chip(x.course) : '') + (repeat ? '<span>' + esc(repeat) + '</span>' : '') +
+          (x.course ? chip(x.course) : '') + (x.kind === 'grade' && x.category ? '<span>' + esc(x.category) + '</span>' : '') + (repeat ? '<span>' + esc(repeat) + '</span>' : '') +
           (x.location ? '<span>' + esc(x.location) + '</span>' : '') +
           (x.added ? '<span class="pill good">Added' + (x.addedAs ? ' as ' + esc(x.addedAs) : '') + '</span>' : '') +
           (x.existing && !x.added ? '<span class="pill" title="' + esc(x.existingTitle || '') + '">' + I.check.replace('<svg', '<svg style="width:10px;height:10px;margin-right:4px"') + esc(EXISTING_LABELS[x.existing] || 'Already in Mellow') + '</span>' : '') +
@@ -7275,7 +7735,7 @@ function fileDetailHtml(d) {
   }
   html += '</div><div class="sugg-foot">' +
     (items.some(function (x) { return !x.added; }) ? '<button class="btn primary" data-drop-apply="' + esc(d.id) + '">' + I.plus + ' Add ticked items</button>' : '') +
-    '<span class="muted" style="font-size:12.5px">Added items show up on Today, Tasks or Finance.</span></div>';
+    '<span class="muted" style="font-size:12.5px">Added items show up on Today, Tasks, Grades or Finance.</span></div>';
   return html;
 }
 
@@ -7291,6 +7751,7 @@ function applyDrop(id, btn) {
     if (val('fs-', x.id) !== undefined) patch.startTime = val('fs-', x.id);
     if (val('fe-', x.id) !== undefined) patch.endTime = val('fe-', x.id);
     if (val('fa-', x.id) !== undefined) patch.amount = val('fa-', x.id);
+    if (val('fo-', x.id) !== undefined) patch.outOf = val('fo-', x.id);
     return { id: x.id, patch: patch };
   });
   if (!choices.length) return toast('Tick something to add first.');
@@ -7308,6 +7769,7 @@ function applyDrop(id, btn) {
       a.finance = Math.max(0, a.finance - imp.added - (imp.settled || 0));
     }
     if (a.finance) parts.push(plural(a.finance, 'finance item'));
+    if (a.grades) parts.push(plural(a.grades, 'score') + ' to Grades');
     var made = imp && imp.detected && imp.detected.length ? ' New accounts to fill in: ' + imp.detected.join(', ') + '.' : '';
     toast((parts.length ? 'Added ' + parts.join(', ') + '.' : 'Nothing new was added.') + made);
     if (res.body.errors && res.body.errors.length) setTimeout(function () { toast(res.body.errors[0]); }, 3800);
@@ -7317,6 +7779,7 @@ function applyDrop(id, btn) {
     refresh();
     refreshDrops();
     if (a.finance) refreshFinance();
+    if (a.grades) refreshGrades();
   });
 }
 
@@ -7327,7 +7790,7 @@ function openDropFile(id) {
   var token = getToken();
   if (!token) return toast('This device needs the token first. Change anything once and Mellow will ask for it.');
   var w = window.open('', '_blank');
-  fetch(url, { headers: { 'X-Ratchet-Token': token } })
+  fetch(url, { headers: authHeaders() })
     .then(function (r) { if (!r.ok) throw new Error(); return r.blob(); })
     .then(function (b) { var u = URL.createObjectURL(b); if (w) w.location = u; else location.href = u; })
     .catch(function () { if (w) w.close(); toast('Couldn\'t open that file.'); });
@@ -7423,9 +7886,9 @@ function renderAi() {
         '<button class="icon-btn" data-ai-delete="' + esc(cv.id) + '" title="Delete">' + I.close + '</button></div>';
     }).join('') : '<div class="quiet-note">No conversations yet.</div>') : '<div class="thinking"><span class="spin-dot"></span>Loading…</div>';
   } else if (!c) {
-    html = '<div style="padding:6px 0 0"><p style="font:400 26px/1.15 var(--serif);margin:0 0 8px">What can I help with?</p>' +
-      '<p class="muted" style="font-size:13px;margin:0 0 14px">I can see your schedule, tasks, news, files you drop, and the parts of your finances you share. I can add things and change how Mellow works, and I always ask before changing anything.</p>' +
-      ['What\'s due this week, and what should I start on?', 'Put the class times from my syllabus on the calendar.', 'How am I doing on my budgets this month?', 'Make the News page show 10 stories instead of 20.']
+    html = '<div style="padding:6px 0 0">' + aiOrbHtml() + '<p style="font:400 26px/1.15 var(--serif);margin:0 0 8px">What can I help with?</p>' +
+      '<p class="muted" style="font-size:13px;margin:0 0 14px">I can see your schedule, tasks, grades, news, files you drop, and the parts of your finances you share. I can add things and change how Mellow works, and I always ask before changing anything.</p>' +
+      ['What\'s due this week, and what should I start on?', 'Put the class times from my syllabus on the calendar.', 'What do I need on my next exam to keep my grade?', 'How am I doing on my budgets this month?', 'Make the News page show 10 stories instead of 20.']
         .map(function (q) { return '<button class="row-link" data-ai-suggest="' + esc(q) + '"><span>' + esc(q) + '</span>' + I.arrow + '</button>'; }).join('') + '</div>';
   } else {
     html = '<div class="chat">' + c.log.map(function (l) {
@@ -7506,18 +7969,29 @@ function attachToAssistant(files) {
 /* ============================================================================
    Guide: getting set up on each device, and how to use each part
    ============================================================================ */
-var setupInfo = null, setupAt = 0;
+var setupInfo = null, setupAt = 0, setupLoading = null;
 var guideOs = null;
 
 function isOnComputer() { return /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname); }
 
+/**
+ * What the guide needs from the engine, one request at a time: once a minute,
+ * or every 15 seconds while it has nothing. Resolves true only when the engine
+ * actually answered, so a caller redraws on news rather than on every ask.
+ * (Resolving at once with nothing used to redraw the Guide, which asked again,
+ * which redrew it: a loop with no pause in it, and the window froze.)
+ */
 function loadSetup(force) {
-  if (location.protocol === 'file:' || (!force && Date.now() - setupAt < 60000)) return Promise.resolve(setupInfo);
+  if (location.protocol === 'file:') return Promise.resolve(false);
+  if (setupLoading) return setupLoading;
+  if (!force && Date.now() - setupAt < (setupInfo ? 60000 : 15000)) return Promise.resolve(false);
   setupAt = Date.now();
-  return fetch('/api/setup', { cache: 'no-store' })
+  setupLoading = fetch('/api/setup', { cache: 'no-store' })
     .then(function (r) { return r.status === 404 ? { unsupported: true, local: isOnComputer() } : r.json(); })
-    .then(function (s) { setupInfo = s; return s; })
-    .catch(function () { return setupInfo; });
+    .then(function (s) { setupInfo = s; return true; })
+    .catch(function () { return false; })
+    .then(function (answered) { setupLoading = null; return answered; });
+  return setupLoading;
 }
 
 function deviceKind() {
@@ -7573,22 +8047,27 @@ function guideSteps() {
   return [
     { done: true, name: 'Start Mellow',
       desc: isOnComputer() ? 'Running on this computer. You\'re looking at it.' : 'Running on your computer, and this device is connected to it.' },
-    { done: hasName, name: 'Tell Mellow your name', desc: hasName ? 'It greets you as ' + esc(state.profile.name) + '.' : 'So the greeting is yours.',
-      action: '<button class="btn sm' + (hasName ? ' ghost' : ' primary') + '" data-guide-jump="g-name">' + (hasName ? 'Change' : 'Add your name') + '</button>' },
+    (acct.info && acct.info.exists
+      ? { done: true, name: 'Your Mellow account',
+          desc: 'Everything belongs to ' + esc((acct.info.account || {}).email || 'your account') + (hasName ? ', and Mellow greets you as ' + esc(state.profile.name) : '') + '.',
+          action: '<button class="btn sm ghost" data-go="accounts">Open</button>' }
+      : { done: hasName, name: 'Make your Mellow account',
+          desc: 'An email and a password of your own, kept on this computer. Your data belongs to it, and your phone signs in with it.',
+          action: isOnComputer() ? '<button class="btn sm primary" data-account-create="1">Make it</button>' : '<button class="btn sm ghost" data-guide-jump="g-name">On the computer</button>' }),
     { done: g.accounts.length > 0, optional: true, name: 'Connect Google',
-      desc: g.accounts.length ? plural(g.accounts.length, 'account') + ' connected.' : 'Brings in your classes, deadlines, exams and emails waiting on a reply. About 15 minutes, once.',
+      desc: g.accounts.length ? plural(g.accounts.length, 'account') + ' connected.' : 'Brings in your classes, deadlines, exams and emails waiting on a reply. ' + (g.client && g.client.ok && g.client.shared ? 'One click per account.' : 'About 10 minutes, once, with a button for each step.'),
       action: '<button class="btn sm' + (g.accounts.length ? ' ghost' : '') + '" data-guide-jump="g-google">How</button>' },
     { done: !!(ai.status && ai.status.hasKey), optional: true, name: 'Turn on the assistant',
       desc: ai.status && ai.status.hasKey ? 'Your API key is added.' : 'Lets you ask Mellow things and scan syllabi and flyers. Needs your own Anthropic key.',
       action: '<button class="btn sm ghost" data-guide-jump="g-ai">How</button>' },
     { done: opened, optional: true, name: 'Add your phone or tablet',
-      desc: opened ? (isOnComputer() ? 'Mellow is open to your other devices.' : 'Done. You\'re on it now.') : 'Use Mellow on an iPhone, iPad or Android phone while your computer is on.',
+      desc: opened ? (isOnComputer() ? 'Mellow is open to your other devices.' : 'Done. You\'re on it now.') : 'Use Mellow on an iPhone, iPad or Android phone while your computer is on. One button, then an address to open.',
       action: '<button class="btn sm ghost" data-guide-jump="g-devices">How</button>' }
   ];
 }
 
 function viewGuide() {
-  if (!setupInfo || Date.now() - setupAt > 60000) loadSetup().then(function () { if (tab === 'guide') render(); });
+  loadSetup().then(function (answered) { if (answered && tab === 'guide') render(); });
   if (!ai.status && !ai.unsupported && !viewGuide.askedAi) {
     viewGuide.askedAi = true;
     loadAiStatus().then(function () { if (tab === 'guide') render(); });
@@ -7688,14 +8167,16 @@ function viewGuide() {
       (isInstalledApp() ? 'And it\'s on your Home Screen.' : 'Add it to your Home Screen below so it opens like an app.') + '</div></div>';
   }
   html += '<div class="card guide-card enter"><ol class="steps-list">' +
-    '<li><b class="h">Open Mellow to your other devices, on the computer</b>' +
+    '<li><b class="h">' + (onComputer ? 'On this computer' : 'Let your devices in, on the computer') + '</b>' +
+      (onComputer ? phoneAccessHtml(s, port) : 'Done: this device is using it now.') +
+      '<details class="by-hand"><summary>Or do it by hand</summary><div>' +
       'Open ' + enginePath('engine-config.json') + ' in Notepad (Windows) or TextEdit (Mac). Two lines change:' +
       '<p><code>"bindHost"</code> becomes the computer\'s address, in quotes. <b>At home on Wi-Fi</b>, use its Wi-Fi address' +
         (onComputer && lan.length ? ' (this computer: <b>' + esc(lan[0].address) + '</b>)' : '') + '. <b>Anywhere</b>, install <a href="https://tailscale.com/download" target="_blank" rel="noopener">Tailscale</a> on the computer and the phone, sign both in to the same account, and use the computer\'s Tailscale address' +
         (onComputer && ts.length ? ' (this computer: <b>' + esc(ts[0].address) + '</b>)' : ', which starts with 100') + '. Both at once works too: <code>["192.168.1.20", "100.101.102.103"]</code>.</p>' +
-      '<p><code>"token"</code> becomes a password only you know, like <code>"blue-harbor-58"</code>. Anyone on the same network could otherwise change things.</p>' +
-      '<div class="note">Save the file, then close Mellow and start it again. Windows may ask whether Node.js can use the network: allow <b>Private networks</b>.' +
-        (s.tokenSet ? ' A token is already set.' : '') + '</div></li>' +
+      (acct.info && acct.info.exists ? '' : '<p><code>"token"</code> becomes a password only you know, like <code>"k7p-m3x-qa9-fdw"</code>. Anyone on the same network could otherwise change things.</p>') +
+      '<div class="note">Save the file, then close Mellow and start it again. Windows may ask whether Mellow can use the network: allow <b>Private networks</b>.' +
+        (s.tokenSet ? ' A token is already set.' : '') + '</div></div></details></li>' +
     '<li><b class="h">Open the address on your phone or tablet</b>' +
       (onComputer && (lan.length || ts.length)
         ? 'In Safari (iPhone, iPad) or Chrome (Android), go to one of these. The phone has to be on the same Wi-Fi, or signed in to Tailscale.' + addrRows(lan.concat(ts))
@@ -7718,19 +8199,17 @@ function viewGuide() {
   '<p class="news-note">What a phone can\'t do: block apps, add your AI key, or connect Google. Those happen on the computer.</p>';
 
   /* google */
-  html += '<div class="section-head guide-sec" id="g-google"><h2>Connect Google</h2><span class="sub">Once, about 15 minutes, on the computer. Read-only: Mellow can\'t send, delete or change anything.</span></div>' +
-    '<div class="card guide-card enter"><ol class="steps-list">' +
-      '<li><b class="h">Create a free Google Cloud project</b>Signed in to your <b>personal</b> Gmail, go to <a href="https://console.cloud.google.com" target="_blank" rel="noopener">console.cloud.google.com</a>. Click the project picker at the top, <b>New project</b>, name it <b>Mellow</b>, <b>Create</b>. Make sure it\'s selected.' +
-        '<div class="note">School accounts often aren\'t allowed to create projects. Your personal one works for both.</div></li>' +
-      '<li><b class="h">Turn on two APIs</b>Search the top bar for <b>Gmail API</b>, open it, click <b>Enable</b>. Do the same for <b>Google Calendar API</b>.</li>' +
-      '<li><b class="h">Set up the sign-in screen</b>Open <b>Google Auth Platform</b> (or <b>OAuth consent screen</b>). App name <b>Mellow</b>, your email for the contacts. Audience: <b>External</b>. Under <b>Test users</b>, add <b>every</b> Google address you\'ll connect.' +
-        '<div class="note">An address missing from Test users gets "access denied". It\'s the most common snag.</div></li>' +
-      '<li><b class="h">Create the client and download it</b>Go to <b>Clients</b> (or Credentials, Create credentials, OAuth client ID). Type: <b>Desktop app</b>. Create, then <b>Download JSON</b>.</li>' +
-      '<li><b class="h">Put the file in Mellow\'s engine folder</b>Move the downloaded <code>client_secret_….json</code> into ' + enginePath('') + ' without renaming it, then reload this page.</li>' +
-      '<li><b class="h">Connect</b>On <b>Accounts</b>, click <b>Connect school account</b>. Google says "hasn\'t verified this app": that\'s expected for your own app. Click <b>Advanced</b>, <b>Go to Mellow</b>, tick both boxes, <b>Continue</b>. Repeat for your personal account.' +
-        '<div class="note">To stop Google signing you out every 7 days, go back to <b>Audience</b> and click <b>Publish app</b>. It doesn\'t make anything public.</div>' +
-        '<p><button class="btn primary sm" data-go="accounts">' + I.accounts + ' Open Accounts</button></p></li>' +
-    '</ol></div>';
+  var gg = google || { client: { ok: false }, accounts: [] };
+  var ggShared = !!(gg.client && gg.client.ok && gg.client.shared);
+  html += '<div class="section-head guide-sec" id="g-google"><h2>Connect Google</h2><span class="sub">' + (ggShared ? 'One click per account, on the computer.' : 'Once, about 10 minutes, on the computer.') + ' Read-only: Mellow can\'t send, delete or change anything.</span></div>';
+  if (gg.accounts.length) {
+    html += '<div class="card gs-done enter">' + I.check + '<div><b>' + plural(gg.accounts.length, 'Google account') + ' connected.</b><span>Add another, or choose what each one is used for, on Accounts.</span></div><button class="btn sm" data-go="accounts">' + I.accounts + ' Open Accounts</button></div>';
+  } else if (ggShared) {
+    html += googleConnectHelpHtml(true) + '<p style="margin-top:12px"><button class="btn primary sm" data-go="accounts">' + mark('google') + ' Connect on Accounts</button></p>';
+  } else {
+    html += googleSetupHtml('guide') + (gg.client && gg.client.ok ? googleConnectHelpHtml(false) : '');
+  }
+  html += '<p class="news-note">If your school blocks its accounts from apps like this, you\'ll see "blocked by your administrator". Forward school mail to your personal Gmail and turn on <b>Find homework</b> for that account, or subscribe to your school calendar\'s secret iCal address (see Troubleshooting).</p>';
 
   /* the assistant */
   html += '<div class="section-head guide-sec" id="g-ai"><h2>The assistant</h2><span class="sub">Optional. Uses Claude with your own key, and a monthly limit you set.</span></div>' +
@@ -7746,6 +8225,7 @@ function viewGuide() {
     ['today', I.calendar, 'Today', 'Your day: schedule, what\'s due, what to catch up on. Switch to week or month, and step through days with the arrows.'],
     ['focus', I.target, 'ADHD tools', 'Every helper in one place: the one thing to do next, a timer you can see draining, today\'s three, a brain dump (Q), check-ins, and help when you\'re stuck.'],
     ['tasks', I.tasks, 'Tasks', 'Everything you have to do. Tick things off; anything found in your email waits for you to confirm it.'],
+    ['grades', I.grade, 'Grades', 'Every course with its grade now, what the rest needs for the grade you want, and your GPA. Drop a syllabus and the weights fill themselves in.'],
     ['news', I.news, 'News', 'Today\'s biggest stories, ranked by how widely they\'re covered, plus your stocks. Tap the papers you subscribe to.'],
     ['finance', I.money, 'Finance', 'Accounts, bills, budgets, cards and goals, typed in by you. Mellow never asks for a bank login and can\'t move money.'],
     ['sleep', I.moon, 'Sleep screen', 'Leave Mellow alone and it becomes a clock over a painting. Set the widgets, artwork and a morning alarm here.'],
@@ -7763,7 +8243,7 @@ function viewGuide() {
     '</div>';
 
   /* shortcuts */
-  var keys = [['Today, ADHD tools, Tasks, News, Finance', '1 2 3 4 5'], ['Files, Sleep screen, Accounts, Guide', '6 7 8 9'], ['Health', 'H'], ['Ask the assistant', 'A'], ['Talk to the assistant out loud', 'Ctrl Space'], ['Day, week or month', 'D W M'],
+  var keys = [['Today, ADHD tools, Tasks, News, Finance', '1 2 3 4 5'], ['Files, Sleep screen, Accounts, Guide', '6 7 8 9'], ['Grades', 'R'], ['Health', 'H'], ['Ask the assistant', 'A'], ['Talk to the assistant out loud', 'Ctrl Space'], ['Day, week or month', 'D W M'],
     ['Previous or next day', '← →'], ['Back to today', 'T'], ['Sync now', 'S'], ['Sleep now', 'Z'], ['Night mode', 'N'], ['Morning briefing', 'B'], ['Full screen', 'F'], ['All shortcuts', '?']];
   html += '<div class="section-head guide-sec" id="g-keys"><h2>Shortcuts</h2><span class="sub">On a computer with a keyboard.</span></div>' +
     '<div class="card keys enter">' + keys.map(function (k) { return '<div class="row"><span>' + k[0] + '</span><kbd>' + k[1] + '</kbd></div>'; }).join('') + '</div>';
@@ -7771,7 +8251,7 @@ function viewGuide() {
   /* privacy */
   html += '<div class="section-head guide-sec" id="g-privacy"><h2>Your data</h2></div>' +
     '<ul class="card bullets enter">' +
-      '<li><b>It all stays on your computer</b>, as plain files in the Mellow folder. There\'s no Mellow account and no Mellow server.</li>' +
+      '<li><b>It all stays on your computer</b>, as plain files in the Mellow folder. Your Mellow account is one of them: there is no Mellow server, and no account anywhere but here.</li>' +
       '<li><b>Google access is read-only.</b> Revoke it any time at <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">myaccount.google.com/permissions</a>.</li>' +
       '<li><b>The assistant only sends what it needs</b> to Anthropic, with card, account and Social Security numbers masked. Finance, then AI access, decides what of your money it can see.</li>' +
       '<li><b>Blocking apps and sites is off.</b> It\'s an optional extra, explained in <code>SETUP.md</code>, and it only logs until you turn it on.</li>' +
@@ -7793,6 +8273,8 @@ function viewGuide() {
   ];
   html += '<div class="section-head guide-sec" id="g-help"><h2>Troubleshooting</h2></div>' +
     '<div class="faq enter">' + faq.map(function (f) { return '<details><summary>' + f[0] + '</summary><div class="ans">' + f[1] + '</div></details>'; }).join('') + '</div>' +
+    '<div class="card community enter"><span class="imp-ic">' + I.help + '</span><div class="imp-t"><b>Still stuck, or have an idea?</b><span>Ask in the Mellow Discord: questions, help getting set up, and suggestions for what Mellow should do next.</span></div>' +
+      '<a class="btn primary sm" href="https://discord.gg/j8xJXhXFe5" target="_blank" rel="noopener">Join the Discord ' + I.external + '</a></div>' +
     '<p class="guide-foot">The full details of every part are in <code>README.md</code> in the Mellow folder. Mellow is free to use and change, and not for sale; see <code>LICENSE.txt</code>.</p>';
 
   return html;
@@ -7809,6 +8291,495 @@ function welcomeHtml() {
 }
 
 /* ============================================================================
+   Connecting Google, step by step
+
+   Google makes each app that reads Gmail register its own sign-in client, in
+   a free Google Cloud project. Each step here opens the exact page in Google
+   Cloud, the downloaded file is chosen here rather than moved into a hidden
+   folder, and the checklist remembers where you got to. When this copy of
+   Mellow comes with a shared client, all of it is skipped.
+   ============================================================================ */
+var GCLOUD = {
+  project: 'https://console.cloud.google.com/projectcreate',
+  apis: 'https://console.cloud.google.com/flows/enableapi?apiid=gmail.googleapis.com,calendar-json.googleapis.com',
+  branding: 'https://console.cloud.google.com/auth/branding',
+  audience: 'https://console.cloud.google.com/auth/audience',
+  clients: 'https://console.cloud.google.com/auth/clients'
+};
+function gcloudUrl(key, project) {
+  var u = GCLOUD[key];
+  return project ? u + (u.indexOf('?') === -1 ? '?' : '&') + 'project=' + encodeURIComponent(project) : u;
+}
+
+var GSETUP_KEY = 'mellow-google-setup';
+function gsetupDone() { try { return JSON.parse(localStorage.getItem(GSETUP_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function gsetupMark(id, on) {
+  var d = gsetupDone();
+  if (on) d[id] = Date.now(); else delete d[id];
+  try { localStorage.setItem(GSETUP_KEY, JSON.stringify(d)); } catch (e) {}
+}
+var gsetupOwn = false; // "use my own client" chosen while a shared one is available
+
+var GSETUP_STEPS = [
+  { id: 'project', title: 'Make a Google Cloud project', link: 'project', button: 'Create project',
+    text: 'Use your <b>personal</b> Google account. Name the project <b>Mellow</b> and click <b>Create</b>. It\'s free: skip anything about billing or a free trial.',
+    note: 'School accounts often can\'t make projects. Your personal one works for your school account too.' },
+  { id: 'apis', title: 'Turn on Gmail and Calendar', link: 'apis', button: 'Turn them on',
+    text: 'Check the project picker at the top says <b>Mellow</b>. Click <b>Next</b>, then <b>Enable</b>. That switches on both at once.' },
+  { id: 'branding', title: 'Name the sign-in screen', link: 'branding', button: 'Open',
+    text: 'Click <b>Get started</b>. App name <b>Mellow</b>, your email, <b>Next</b>. Audience <b>External</b>, <b>Next</b>. Your email again, <b>Next</b>. Tick to agree, <b>Create</b>.' },
+  { id: 'publish', title: 'Publish it', link: 'audience', button: 'Open Audience',
+    text: 'Click <b>Publish app</b>, then <b>Confirm</b>. Now any of your Google accounts can connect, and Google stops signing you out every week. Nothing becomes public.' },
+  { id: 'client', title: 'Make a Desktop client and download it', link: 'clients', button: 'Open Clients',
+    text: 'Click <b>Create client</b>. Application type <b>Desktop app</b>, any name, <b>Create</b>. Then <b>Download JSON</b>.' }
+];
+
+/** The setup checklist. where: 'accounts' or 'guide'. */
+function googleSetupHtml(where) {
+  var g = google || { client: { ok: false }, accounts: [] };
+  var c = g.client || { ok: false };
+  var fileOk = !!(c.ok && !c.shared);
+  var done = gsetupDone();
+  var html = '<div class="card gsetup enter">' +
+    '<div class="gs-head"><span class="gs-logo">' + mark('google', 'lg') + '</span><div style="min-width:0"><div class="eyebrow">One-time setup · about 10 minutes</div><h3>Set up Google sign-in</h3>' +
+    '<p>Google makes every app that reads Gmail register its own sign-in. You make Mellow\'s in your own free Google Cloud account, once, and it works for all your Google accounts. Each step opens the right page.</p></div></div>';
+  if (!isOnComputer()) {
+    return html + '<div class="alert info" style="margin:14px 0 0">' + I.laptop + '<div class="txt"><b>Do this on the computer running Mellow.</b> Google sends the sign-in back to that computer, so it can\'t be done from a phone.</div></div></div>';
+  }
+  var isDone = function (id) { return fileOk || !!done[id]; };
+  var next = -1;
+  GSETUP_STEPS.forEach(function (st, i) { if (next === -1 && !isDone(st.id)) next = i; });
+  if (next === -1 && !fileOk) next = GSETUP_STEPS.length;
+  var count = GSETUP_STEPS.filter(function (st) { return isDone(st.id); }).length + (fileOk ? 1 : 0);
+  html += '<div class="gs-progress"><span>' + count + ' of ' + (GSETUP_STEPS.length + 1) + '</span><div class="meter"><i style="width:' + Math.round(100 * count / (GSETUP_STEPS.length + 1)) + '%"></i></div></div>' +
+    '<ol class="gs-steps">' + GSETUP_STEPS.map(function (st, i) {
+      var ok = isDone(st.id);
+      return '<li class="gs-step' + (ok ? ' done' : '') + (i === next ? ' next' : '') + '">' +
+        '<button class="gs-tick" data-gsetup-tick="' + st.id + '" aria-pressed="' + ok + '" title="' + (ok ? 'Done. Click to mark it not done.' : 'Mark done') + '"' + (fileOk ? ' disabled' : '') + '>' + (ok ? I.check : i + 1) + '</button>' +
+        '<div class="gs-body"><b>' + st.title + '</b><span>' + st.text + '</span>' + (st.note && !ok ? '<small>' + st.note + '</small>' : '') + '</div>' +
+        '<a class="btn sm' + (i === next ? ' primary' : ' ghost') + '" href="' + esc(gcloudUrl(st.link, fileOk ? c.projectNumber : null)) + '" target="_blank" rel="noopener" data-gsetup-open="' + st.id + '">' + st.button + ' ' + I.external + '</a></li>';
+    }).join('') +
+    '<li class="gs-step' + (fileOk ? ' done' : '') + (next === GSETUP_STEPS.length ? ' next' : '') + '">' +
+      '<span class="gs-tick">' + (fileOk ? I.check : GSETUP_STEPS.length + 1) + '</span>' +
+      '<div class="gs-body"><b>Give that file to Mellow</b><span>' + (fileOk
+        ? 'Done. Mellow has your sign-in client' + (c.projectNumber ? ', from project ' + esc(c.projectNumber) : '') + '.'
+        : 'Choose the <code>client_secret_….json</code> file you just downloaded. It\'s usually in <b>Downloads</b>. You can also drop it anywhere on this page.') + '</span>' +
+        (c.error && !c.shared ? '<small class="err">' + esc(c.error) + '</small>' : '') +
+        (errors._gclient ? '<small class="err">' + errors._gclient + '</small>' : '') + '</div>' +
+      '<button class="btn sm' + (next === GSETUP_STEPS.length ? ' primary' : ' ghost') + '" data-gclient-pick="1">' + I.upload + ' ' + (fileOk ? 'Choose another' : 'Choose file') + '</button></li>' +
+    '</ol>' +
+    (where === 'guide' && fileOk ? '<div class="gs-foot"><span>Last step: connect your accounts on Accounts.</span><button class="btn primary sm" data-go="accounts">' + I.accounts + ' Open Accounts</button></div>' : '') +
+    '<input type="file" id="gclient-file" accept=".json,application/json" hidden></div>';
+  return html;
+}
+
+/** What Google shows while connecting, so the warning screen doesn't look like a mistake. */
+function googleConnectHelpHtml(shared) {
+  return '<div class="card gconnect enter"><div class="eyebrow">What you\'ll see</div>' +
+    '<ol class="gc-steps">' +
+      '<li><b>Pick the account.</b> Google opens in your browser.</li>' +
+      '<li><b>"Google hasn\'t verified this app".</b> ' + (shared
+        ? 'Mellow\'s sign-in is new and hasn\'t been reviewed by Google yet. Click <b>Advanced</b>, then <b>Go to Mellow</b>.'
+        : 'That\'s expected: it\'s your own app, and nobody reviews those. Click <b>Advanced</b>, then <b>Go to Mellow</b>.') + '</li>' +
+      '<li><b>Tick both boxes</b> (read your email, see your calendars) and click <b>Continue</b>.</li>' +
+      '<li><b>"Connected".</b> Come back here. The first sync starts straight away.</li>' +
+    '</ol></div>';
+}
+
+/** A button that fixes what an account's sync error is about, when it's a setup step. */
+function accountFixHtml(a, g) {
+  var e = String(a.lastError || '');
+  var proj = (/project[ =]?(\d{6,})/i.exec(e) || [])[1] || (g.client && !g.client.shared && g.client.projectNumber) || null;
+  if (/has not been used|is disabled|not enabled|Turn on the Gmail API/i.test(e)) {
+    return '<a class="btn sm primary" target="_blank" rel="noopener" href="' + esc(gcloudUrl('apis', proj)) + '">Turn on Gmail and Calendar ' + I.external + '</a>';
+  }
+  if (/7 days|Testing|Publish app/i.test(e)) {
+    return '<a class="btn sm" target="_blank" rel="noopener" href="' + esc(gcloudUrl('audience', proj)) + '">Publish the app ' + I.external + '</a>';
+  }
+  return '';
+}
+
+/* The downloaded client file, read here and handed to the engine. Never sent to Files, where it would be read by Claude. */
+function looksLikeGoogleClient(name) { return /^client_secret.*\.json$/i.test(String(name || '')); }
+
+function uploadGoogleClient(file) {
+  if (file.size > 64 * 1024) { errors._gclient = 'That file is too big to be the one Google gave you.'; return render(); }
+  var reader = new FileReader();
+  reader.onerror = function () { errors._gclient = 'Couldn\'t read that file.'; render(); };
+  reader.onload = function () {
+    post('/api/google/client', { json: String(reader.result || '') }).then(function (res) {
+      if (res.status === 404) {
+        errors._gclient = 'This Mellow needs a restart before it can take the file. ' + restartButtonHtml() + ' Or move the file into ' + enginePath('') + ' and reload.';
+      } else if (!res.ok) {
+        errors._gclient = esc((res.body && res.body.error) || 'That didn\'t work.');
+      } else {
+        delete errors._gclient;
+        if (res.body.status) google = res.body.status;
+        gsetupMark('client', true);
+        toast(res.body.changed ? 'Google sign-in is set up. Now connect your accounts.' : 'That file was already set up.');
+        if (tab !== 'accounts') return switchTab('accounts');
+      }
+      render();
+    });
+  };
+  reader.readAsText(file);
+}
+
+/** Google's client files are caught before a drop reaches Files; .json files are checked inside too, in case one was renamed. */
+function splitGoogleClients(files) {
+  return Promise.all(files.map(function (f) {
+    if (looksLikeGoogleClient(f.name)) return Promise.resolve(true);
+    if (!/\.json$/i.test(f.name) || f.size > 64 * 1024) return Promise.resolve(false);
+    return new Promise(function (resolve) {
+      var r = new FileReader();
+      r.onload = function () { var t = String(r.result || ''); resolve(/"(installed|web)"\s*:/.test(t) && /client_secret|GOCSPX-/.test(t)); };
+      r.onerror = function () { resolve(false); };
+      r.readAsText(f);
+    });
+  })).then(function (flags) {
+    return { clients: files.filter(function (f, i) { return flags[i]; }), rest: files.filter(function (f, i) { return !flags[i]; }) };
+  });
+}
+
+/* ============================================================================
+   Restarting Mellow, and opening it to your phone
+   ============================================================================ */
+function canRestartHere() { return isOnComputer() && !!(upd.s && upd.s.canRestart); }
+
+function restartButtonHtml(label) {
+  return canRestartHere() ? '<button class="btn sm primary" data-app-restart="1">' + I.sync + ' ' + (label || 'Restart Mellow') + '</button>' : '';
+}
+
+function restartMellow(btn) {
+  if (btn) btn.disabled = true;
+  post('/api/app/restart', {}).then(function (res) {
+    if (!res.ok) {
+      if (btn) btn.disabled = false;
+      return toast(res.status === 404 ? 'This Mellow can\'t restart itself yet. Quit it and open it again.' : (res.body && res.body.error) || 'Couldn\'t restart.');
+    }
+    toast('Restarting Mellow…');
+    var tries = 0;
+    var wait = function () {
+      tries++;
+      fetch('/api/state', { cache: 'no-store' }).then(function (r) {
+        if (r.ok && tries > 2) return location.reload();
+        setTimeout(wait, 1000);
+      }, function () { if (tries < 60) setTimeout(wait, 1000); });
+    };
+    setTimeout(wait, 1500);
+  });
+}
+
+var phoneOpen = null; // what the last "let my phone in" saved: { token, addresses }
+
+function openToPhone(kind, btn) {
+  if (btn) btn.disabled = true;
+  post('/api/setup/phone', { open: true, kind: kind || undefined }).then(function (res) {
+    if (btn) btn.disabled = false;
+    if (res.status === 404) return toast('This needs Mellow restarted first. Or follow "Do it by hand" below.');
+    if (!res.ok) return toast((res.body && res.body.error) || 'That didn\'t work.');
+    phoneOpen = { token: res.body.token, addresses: res.body.addresses || [] };
+    if (res.body.setup) setupInfo = res.body.setup;
+    render();
+  });
+}
+
+function closeToPhone(btn) {
+  if (btn) btn.disabled = true;
+  post('/api/setup/phone', { open: false }).then(function (res) {
+    if (btn) btn.disabled = false;
+    if (!res.ok) return toast((res.body && res.body.error) || 'That didn\'t work.');
+    phoneOpen = null;
+    if (res.body.setup) setupInfo = res.body.setup;
+    toast('Other devices are shut out after Mellow restarts.');
+    render();
+  });
+}
+
+/** The phone section's first step: one button, then the address and token to use. */
+function phoneAccessHtml(s, port) {
+  if (!isOnComputer()) return '';
+  var lan = (s.addresses || []).filter(function (a) { return a.kind === 'lan'; });
+  var ts = (s.addresses || []).filter(function (a) { return a.kind === 'tailscale'; });
+  var pending = s.pendingBindHosts;
+  var openNow = (s.addresses || []).some(function (a) { return a.open; });
+  var html = '<div class="card phone-open enter">';
+  if (pending && pending.length && !(pending.length === 1 && pending[0] === '127.0.0.1')) {
+    html += '<div class="po-head">' + I.check + '<div><b>Saved. Restart Mellow to let your phone in.</b><span>After it restarts, open one of these on your phone or tablet.</span></div>' + restartButtonHtml('Restart now') + '</div>' +
+      '<div class="addr-list">' + pending.map(function (a) { return '<div class="addr">' + copyCmd('http://' + a + ':' + port + '/') + '</div>'; }).join('') + '</div>' +
+      (acct.info && acct.info.exists
+        ? '<div class="po-token"><span>On the phone, sign in with your Mellow account: <b>' + esc((acct.info.account || {}).email || 'your email') + '</b> and your password. Nothing to type from here.</span></div>'
+        : phoneOpen && phoneOpen.token ? '<div class="po-token"><span>The first time you change something on the phone, Mellow asks for this password. Type it exactly:</span>' + copyCmd(phoneOpen.token) +
+            (isOnComputer() ? '<div class="note">Easier: make a Mellow account on <button class="link-inline" data-go="accounts">Accounts</button> and sign in on the phone with your email instead.</div>' : '') + '</div>'
+        : s.tokenSet ? '<div class="po-token"><span>The phone asks for the <code>token</code> from ' + enginePath('engine-config.json') + ' the first time you change something, unless you make a Mellow account first.</span></div>' : '') +
+      (canRestartHere() ? '' : '<div class="note">Close Mellow and open it again to restart it. Windows may ask whether Mellow can use the network: allow <b>Private networks</b>.</div>');
+  } else if (pending && pending.length === 1 && pending[0] === '127.0.0.1') {
+    html += '<div class="po-head">' + I.lock + '<div><b>Other devices are shut out after Mellow restarts.</b><span>Until then, anything already connected keeps working.</span></div>' + restartButtonHtml('Restart now') + '</div>';
+  } else if (openNow) {
+    html += '<div class="po-head">' + I.check + '<div><b>Your phone and tablet can reach Mellow.</b><span>Use one of the addresses in the next step.</span></div>' +
+      '<button class="btn ghost sm" data-phone-close="1">Shut other devices out</button></div>';
+  } else {
+    html += '<div class="po-head">' + I.phone + '<div><b>Let your phone and tablet in</b><span>Mellow starts listening on this computer\'s ' + (lan.length && ts.length ? 'Wi-Fi and Tailscale addresses' : ts.length ? 'Tailscale address' : 'Wi-Fi address') + ', and makes a password only your devices will have.</span></div>' +
+      '<div class="po-acts">' + (lan.length || ts.length ? '<button class="btn primary sm" data-phone-open="">' + I.phone + ' Let my devices in</button>' : '') +
+        (lan.length && ts.length ? '<button class="btn ghost sm" data-phone-open="tailscale" title="Only through Tailscale, not the Wi-Fi">Tailscale only</button>' : '') + '</div></div>' +
+      (lan.length || ts.length ? '' : '<div class="note">This computer isn\'t on a home Wi-Fi network or Tailscale right now. On school and work Wi-Fi, phones usually can\'t reach a computer directly, so install <a href="https://tailscale.com/download" target="_blank" rel="noopener">Tailscale</a> on the computer and the phone, sign both in to the same account, and come back.</div>') +
+      (!ts.length ? '<div class="note">Away from home too: install <a href="https://tailscale.com/download" target="_blank" rel="noopener">Tailscale</a> on both, sign in to the same account, then press the button.</div>' : '');
+  }
+  return html + '</div>';
+}
+
+document.addEventListener('click', function (ev) {
+  if (!ev.target.closest) return;
+  var el = ev.target.closest('[data-gsetup-tick],[data-gsetup-open],[data-gclient-pick],[data-gsetup-own],[data-app-restart],[data-phone-open],[data-phone-close]');
+  if (!el) return;
+  if (el.hasAttribute('data-gsetup-tick')) {
+    var id = el.getAttribute('data-gsetup-tick');
+    gsetupMark(id, !gsetupDone()[id]);
+    return render();
+  }
+  if (el.hasAttribute('data-gsetup-open')) {
+    // Opening a step's page counts as doing it; the tick can be taken back. Rendered after the link has opened.
+    var sid = el.getAttribute('data-gsetup-open');
+    setTimeout(function () { gsetupMark(sid, true); render(); }, 300);
+    return;
+  }
+  if (el.hasAttribute('data-gclient-pick')) {
+    var input = document.getElementById('gclient-file');
+    if (input) input.click();
+    return;
+  }
+  if (el.hasAttribute('data-gsetup-own')) { gsetupOwn = !gsetupOwn; return render(); }
+  if (el.hasAttribute('data-app-restart')) return restartMellow(el);
+  if (el.hasAttribute('data-phone-open')) return openToPhone(el.getAttribute('data-phone-open'), el);
+  if (el.hasAttribute('data-phone-close')) return closeToPhone(el);
+});
+
+document.addEventListener('change', function (ev) {
+  if (ev.target.id !== 'gclient-file') return;
+  var f = ev.target.files && ev.target.files[0];
+  ev.target.value = '';
+  if (f) uploadGoogleClient(f);
+});
+
+/* ============================================================================
+   Your Mellow account
+
+   Not a Google sign-in, and not an account on anybody's server: an email, a
+   name and a password kept on the computer running Mellow. It is what your
+   data belongs to, and how your phone gets in. The computer itself is trusted
+   and never asks for the password. Google accounts are connected to it
+   afterwards, as many as you like, and none of them is how you sign in.
+   ============================================================================ */
+var SESSION_KEY = 'mellow-session';
+function getSession() { try { return localStorage.getItem(SESSION_KEY) || ''; } catch (e) { return ''; } }
+function setSession(v) { try { v ? localStorage.setItem(SESSION_KEY, v) : localStorage.removeItem(SESSION_KEY); } catch (e) {} }
+
+var acct = { info: null, at: 0, view: null, err: '', busy: false, form: null };
+
+/** Every request carries the session, and the old engine token if this device still has one. */
+function authHeaders(extra) {
+  var h = extra || {};
+  var s = getSession();
+  if (s) h['X-Mellow-Session'] = s;
+  var t = getToken();
+  if (t) h['X-Ratchet-Token'] = t;
+  return h;
+}
+
+function thisDeviceName() {
+  var k = deviceKind();
+  var names = { iphone: 'iPhone', ipad: 'iPad', android: 'Android phone', windows: 'Windows PC', mac: 'Mac', linux: 'Linux' };
+  var ua = navigator.userAgent || '';
+  var browser = /EdgA?\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
+  return (names[k] || 'A device') + (browser ? ', ' + browser : '');
+}
+
+function loadAccount(force) {
+  if (location.protocol === 'file:') return Promise.resolve(null);
+  if (!force && acct.info && Date.now() - acct.at < 30000) return Promise.resolve(acct.info);
+  acct.at = Date.now();
+  return fetch('/api/account', { cache: 'no-store', headers: authHeaders() })
+    .then(function (r) { return r.status === 404 ? { unsupported: true } : r.json(); })
+    .then(function (a) { acct.info = a; return a; })
+    .catch(function () { return acct.info; });
+}
+
+/** Shows the sign-in screen (or "make your account", on the computer). */
+function askSignIn(which) {
+  return loadAccount(true).then(function (a) {
+    if (!a || a.unsupported) return;
+    acct.view = which || (a.canCreate ? 'create' : 'signin');
+    renderAuth();
+  });
+}
+
+function closeSignIn() {
+  acct.view = null;
+  acct.err = '';
+  var el = document.getElementById('auth-screen');
+  if (el) el.remove();
+  document.body.classList.remove('auth-open');
+}
+
+function renderAuth() {
+  if (!acct.view) return closeSignIn();
+  var creating = acct.view === 'create';
+  var el = document.getElementById('auth-screen');
+  if (!el) {
+    document.body.insertAdjacentHTML('beforeend', '<div class="auth-screen" id="auth-screen" role="dialog" aria-modal="true" aria-label="Sign in to Mellow"></div>');
+    el = document.getElementById('auth-screen');
+  }
+  document.body.classList.add('auth-open');
+  var busy = acct.busy;
+  el.innerHTML = '<div class="card auth-card enter">' +
+    '<div class="auth-brand"><span class="reactor"><span class="logo-mark"><svg viewBox="0 0 100 100"><defs><linearGradient id="lm-auth" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6aa6ff"/><stop offset=".55" stop-color="#2f6bff"/><stop offset="1" stop-color="#1745c9"/></linearGradient></defs><rect width="100" height="100" rx="26" fill="url(#lm-auth)"/><path d="M28 66V47a11 11 0 0 1 22 0v19M50 47a11 11 0 0 1 22 0v19" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/></svg></span></span>' +
+      '<div><b>Mellow</b><small class="eyebrow">' + (creating ? 'Make your account' : 'Sign in') + '</small></div></div>' +
+    '<p class="auth-say">' + (creating
+      ? 'One account for all of it: your calendar, grades, money and files, and the Google accounts you connect. It lives on this computer, not on anyone\'s server.'
+      : 'Sign in with your Mellow account. That\'s the email and password you made on the computer running Mellow, not a Google account.') + '</p>' +
+    '<form class="auth-form" id="auth-form" autocomplete="on">' +
+      (creating ? '<label>Your name<input id="auth-name" autocomplete="given-name" placeholder="Sam" maxlength="40"></label>' : '') +
+      '<label>Email<input id="auth-email" type="email" autocomplete="username" inputmode="email" autocapitalize="none" spellcheck="false" placeholder="you@example.com" value="' + esc((acct.info && acct.info.account && acct.info.account.email) || '') + '"></label>' +
+      '<label>Password<input id="auth-password" type="password" autocomplete="' + (creating ? 'new-password' : 'current-password') + '" placeholder="' + (creating ? 'At least 8 characters' : '') + '"></label>' +
+      (acct.err ? '<div class="err">' + esc(acct.err) + '</div>' : '') +
+      '<button class="btn primary" type="submit"' + (busy ? ' disabled' : '') + '>' + (busy ? 'One moment…' : creating ? 'Create my account' : 'Sign in') + '</button>' +
+    '</form>' +
+    '<small class="auth-foot">' + (creating
+      ? 'Your password never leaves this computer, and nothing is sent anywhere. Write it down: there is nobody to reset it for you, though you can set a new one from this computer.'
+      : 'Forgotten it? Open Mellow on the computer it runs on: Accounts, Your Mellow account, Change password.') + '</small></div>';
+  var first = el.querySelector(creating ? '#auth-name' : '#auth-email');
+  if (first && !busy) setTimeout(function () { first.focus(); }, 60);
+}
+
+function submitAuth() {
+  if (acct.busy) return;
+  var creating = acct.view === 'create';
+  var v = function (id) { var e = document.getElementById(id); return e ? e.value : ''; };
+  var body = { email: v('auth-email').trim(), password: v('auth-password'), device: thisDeviceName() };
+  if (creating) body.name = v('auth-name').trim();
+  acct.busy = true; acct.err = ''; renderAuth();
+  post('/api/account/' + (creating ? 'create' : 'signin'), body).then(function (res) {
+    acct.busy = false;
+    if (!res.ok) {
+      acct.err = (res.body && res.body.error) || 'That didn\'t work.';
+      return renderAuth();
+    }
+    setSession(res.body.token);
+    acct.info = { exists: true, canCreate: false, signedIn: true, account: res.body.account };
+    closeSignIn();
+    toast(creating ? 'Your Mellow account is ready.' : 'Signed in.');
+    refresh();
+  });
+}
+
+function signOutHere() {
+  post('/api/account/signout', {}).then(function () {
+    setSession('');
+    acct.info = null;
+    askSignIn('signin');
+  });
+}
+
+/** The account card on Accounts: who you are, the password, and the devices signed in. */
+function accountCardHtml() {
+  var a = acct.info;
+  if (!a || a.unsupported) {
+    if (!a && !accountCardHtml.asked) { accountCardHtml.asked = true; loadAccount().then(function () { if (tab === 'accounts') render(); }); }
+    return a && a.unsupported
+      ? '<div class="section-head"><h2>Your Mellow account</h2></div><div class="quiet-note">Restart Mellow to switch accounts on.</div>'
+      : '';
+  }
+  var html = '<div class="section-head"><h2>Your Mellow account</h2><span class="sub">What your data belongs to, and how your phone signs in</span></div>';
+  if (!a.exists) {
+    if (!isOnComputer()) return html + '<div class="quiet-note">There\'s no account yet. Make one on the computer running Mellow.</div>';
+    return html + '<div class="card acct-make enter"><div class="am-i">' + I.accounts + '</div>' +
+      '<div class="am-t"><b>Make your Mellow account</b><span>An email and a password of your own, kept on this computer. Your phone and iPad sign in with it instead of typing a long token, and everything you connect (all your Gmail accounts, your grades, your money) belongs to it.</span></div>' +
+      '<button class="btn primary sm" data-account-create="1">' + I.accounts + ' Make my account</button></div>';
+  }
+  var acc = a.account || {};
+  var devices = acc.devices || [];
+  html += '<div class="card set-card enter">' +
+    '<div class="set-row"><div class="lbl"><b>' + esc(acc.name || 'You') + '</b><span>' + esc(acc.email || '') + '</span></div>' +
+      (a.signedIn ? '<button class="btn ghost sm" data-account-form="profile">Edit</button>' : '') + '</div>' +
+    (acct.form === 'profile' ? '<div class="set-row" data-keep="1"><div class="lbl"><b>Name and email</b><span>The name is what Today greets you by.</span></div>' +
+      '<input class="set-input" id="acc-name" maxlength="40" placeholder="Your name" value="' + esc(acc.name || '') + '" style="flex:0 1 180px">' +
+      '<input class="set-input" id="acc-email" type="email" autocapitalize="none" spellcheck="false" placeholder="you@example.com" value="' + esc(acc.email || '') + '" style="flex:0 1 220px">' +
+      '<button class="btn primary sm" data-account-save="profile">Save</button><button class="btn ghost sm" data-account-cancel="1">Cancel</button></div>' : '') +
+    '<div class="set-row"><div class="lbl"><b>Password</b><span>' + (isOnComputer()
+      ? 'On this computer you can set a new one without the old one. Every other device is signed out when it changes.'
+      : 'Changing it signs every other device out.') + '</span></div>' +
+      '<button class="btn sm" data-account-form="password">Change password</button></div>' +
+    (acct.form === 'password' ? '<div class="set-row" data-keep="1"><div class="lbl"><b>New password</b><span>At least 8 characters.</span></div>' +
+      (isOnComputer() ? '' : '<input class="set-input" id="acc-current" type="password" autocomplete="current-password" placeholder="Current password" style="flex:0 1 200px">') +
+      '<input class="set-input" id="acc-next" type="password" autocomplete="new-password" placeholder="New password" style="flex:0 1 200px">' +
+      '<button class="btn primary sm" data-account-save="password">Save</button><button class="btn ghost sm" data-account-cancel="1">Cancel</button></div>' : '') +
+    '<div class="set-row"><div class="lbl"><b>Signed in</b><span>' + (devices.length
+      ? plural(devices.length, 'device') + ' with your account. This computer never needs to sign in.'
+      : 'No other device is signed in yet. The Guide shows how to let your phone in.') + '</span></div>' +
+      (devices.length ? '<button class="btn ghost sm" data-account-signout="all">Sign them all out</button>' : '') + '</div>' +
+    (devices.length ? '<div class="devices">' + devices.map(function (d) {
+      return '<div class="device-row"><span class="dv-i">' + (/iPhone|Android/.test(d.device) ? I.phone : /iPad/.test(d.device) ? I.tablet : I.laptop) + '</span>' +
+        '<div style="min-width:0"><b>' + esc(d.device) + '</b><span>Signed in ' + esc(relDay(d.createdAt).toLowerCase()) + ' · last used ' + esc(ago(d.lastSeenAt)) + '</span></div>' +
+        '<button class="btn ghost sm" data-account-revoke="' + esc(d.id) + '">Sign out</button></div>';
+    }).join('') + '</div>' : '') +
+  '</div>' +
+  (errors._account ? '<div class="err">' + esc(errors._account) + '</div>' : '') +
+  '<p class="news-note">This is a Mellow account, not a Google one, and it is only on this computer: there is no Mellow server to hold it. Your Google accounts are connected below.</p>';
+  return html;
+}
+
+function accountPost(what, body) {
+  return post('/api/account/' + what, body).then(function (res) {
+    if (!res.ok) { errors._account = (res.body && res.body.error) || 'That didn\'t work.'; render(); return res; }
+    delete errors._account;
+    if (res.body.account) acct.info = { exists: true, canCreate: false, signedIn: true, account: res.body.account };
+    if (res.body.token) setSession(res.body.token);
+    acct.form = null;
+    document.querySelectorAll('[data-keep] .set-input').forEach(function (i) { i.value = ''; });
+    if (res.body.state) { state = res.body.state; }
+    render();
+    return res;
+  });
+}
+
+document.addEventListener('click', function (ev) {
+  if (!ev.target.closest) return;
+  var el = ev.target.closest('[data-account-create],[data-account-form],[data-account-cancel],[data-account-save],[data-account-signout],[data-account-revoke],[data-auth-close]');
+  if (!el) return;
+  if (el.hasAttribute('data-auth-close')) return closeSignIn();
+  if (el.hasAttribute('data-account-create')) { acct.err = ''; return askSignIn('create'); }
+  if (el.hasAttribute('data-account-form')) { acct.form = el.getAttribute('data-account-form'); delete errors._account; return render(); }
+  if (el.hasAttribute('data-account-cancel')) { acct.form = null; delete errors._account; return render(); }
+  if (el.hasAttribute('data-account-signout')) {
+    if (el.getAttribute('data-account-signout') === 'all') {
+      if (!window.confirm('Sign every other device out?\n\nYour phone and tablet will have to sign in again.')) return;
+      return accountPost('signout', { all: true }).then(function () { toast('Signed out everywhere else.'); loadAccount(true).then(render); });
+    }
+    return signOutHere();
+  }
+  if (el.hasAttribute('data-account-revoke')) {
+    return accountPost('device/revoke', { id: el.getAttribute('data-account-revoke') }).then(function (res) { if (res.ok) toast('That device is signed out.'); });
+  }
+  if (el.hasAttribute('data-account-save')) {
+    var what = el.getAttribute('data-account-save');
+    var v = function (id) { var e = document.getElementById(id); return e ? e.value : ''; };
+    el.disabled = true;
+    var done = function () { el.disabled = false; };
+    if (what === 'profile') return accountPost('profile', { name: v('acc-name'), email: v('acc-email') }).then(done);
+    return accountPost('password', { current: v('acc-current') || undefined, next: v('acc-next') }).then(function (res) {
+      done();
+      if (res.ok) toast('Password changed. Other devices have to sign in again.');
+    });
+  }
+});
+
+document.addEventListener('submit', function (ev) {
+  if (ev.target.id !== 'auth-form') return;
+  ev.preventDefault();
+  submitAuth();
+});
+
+/* ============================================================================
    Chrome: nav, sidebar, render
    ============================================================================ */
 function navCounts() {
@@ -7821,7 +8792,8 @@ function navCounts() {
     tasks: late ? { n: late, hot: true } : open ? { n: open } : null,
     accounts: bad ? { n: '!', hot: true } : null,
     finance: fs && fs.overdue.length ? { n: fs.overdue.length, hot: true } : billsSoon ? { n: billsSoon } : null,
-    files: filesToReview() ? { n: filesToReview() } : null
+    files: filesToReview() ? { n: filesToReview() } : null,
+    grades: gradingWaiting() ? { n: gradingWaiting() } : null
   };
 }
 
@@ -7829,6 +8801,28 @@ function latestSync() {
   var best = null;
   ((google && google.accounts) || []).forEach(function (a) { if (a.lastSync && (!best || a.lastSync > best)) best = a.lastSync; });
   return best;
+}
+
+/* Status lights under This week: the engine answering, Google syncing, the assistant ready. */
+function sysLightsHtml() {
+  var ga = (google && google.accounts) || [];
+  var gBad = ga.some(function (a) { return a.needsReconnect || a.lastError; });
+  if (!ai.status && !ai.unsupported && !sysLightsHtml.asked && location.protocol !== 'file:') {
+    sysLightsHtml.asked = true;
+    loadAiStatus().then(function () { if (state) renderChrome(); });
+  }
+  var s = ai.status;
+  var lights = [
+    ['on', 'Engine', 'Mellow is running and answering.'],
+    [!ga.length ? 'off' : gBad ? 'warn' : google.syncing ? 'busy' : 'on', 'Google', !ga.length ? 'No Google account connected.' : gBad ? 'An account needs attention on Accounts.' : google.syncing ? 'Syncing now.' : 'Synced ' + ago(latestSync()) + '.'],
+    [s && s.hasKey && s.enabled ? 'on' : 'off', 'AI', s ? (!s.hasKey ? 'No API key yet.' : s.enabled ? 'The assistant is ready.' : 'The assistant is switched off.') : 'Checking the assistant.']
+  ];
+  return '<div class="sys">' + lights.map(function (l) { return '<span class="' + l[0] + '" title="' + esc(l[2]) + '"><i></i>' + l[1] + '</span>'; }).join('') + '</div>';
+}
+
+/* The assistant's face on a fresh conversation: rings turning slowly round a soft core. */
+function aiOrbHtml() {
+  return '<div class="ai-orb" aria-hidden="true"><i></i><i></i><i></i><b></b></div>';
 }
 
 function renderChrome() {
@@ -7848,7 +8842,7 @@ function renderChrome() {
     '<div class="eyebrow">This week</div>' +
     '<div class="big">' + pct + '<span style="font-size:20px">%</span></div>' +
     '<div class="muted" style="font-size:12.5px;margin-bottom:10px">' + s.weekDone + ' of ' + s.weekTotal + ' done' + (s.streakDays ? ' · ' + s.streakDays + '-day streak' : '') + '</div>' +
-    '<div class="meter"><i style="width:' + pct + '%"></i></div>';
+    '<div class="meter"><i style="width:' + pct + '%"></i></div>' + sysLightsHtml();
 
   var used = state.passes.used, per = state.passes.perWeek, dots = '';
   for (var i = 0; i < per; i++) dots += '<i class="' + (i < used ? 'used' : '') + '"></i>';
@@ -7887,7 +8881,7 @@ function render() {
     if (/^(INPUT|SELECT)$/.test(el.tagName)) kept.push({ id: el.id, value: el.value, checked: el.checked });
   });
 
-  view.innerHTML = tab === 'focus' ? viewFocus() : tab === 'tasks' ? viewTasks() : tab === 'accounts' ? viewAccounts() : tab === 'guide' ? viewGuide() : tab === 'files' ? viewFiles()
+  view.innerHTML = tab === 'focus' ? viewFocus() : tab === 'tasks' ? viewTasks() : tab === 'accounts' ? viewAccounts() : tab === 'guide' ? viewGuide() : tab === 'files' ? viewFiles() : tab === 'grades' ? viewGrades()
     : tab === 'news' ? viewNews() : tab === 'finance' ? viewFinance() : tab === 'health' ? viewHealth() : tab === 'sleep' ? viewSleep() : viewToday();
 
   kept.forEach(function (k) {
@@ -7910,6 +8904,678 @@ function render() {
   }
   if (s) lastWeekDone = s.weekDone;
 }
+
+/* ============================================================================
+   HUD: the status line over every page, its clock, and the ring gauges.
+
+   Read-outs only. Each page says the two or three numbers worth knowing at a
+   glance, from data the page already has; nothing is fetched for them.
+   ============================================================================ */
+function hudClockText() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function hudTelemetry(which) {
+  var out = [];
+  try {
+    if (!state) return out;
+    var now = Date.now();
+    var open = state.tasks.filter(function (t) { return !t.done && t.group !== 'email'; });
+    var late = lateTasks();
+    var within = function (t, ms) { var due = t.dueAt || t.nextDueAt; var left = due ? new Date(due) - now : null; return left != null && left >= 0 && left < ms; };
+    if (which === 'today') {
+      var items = viewDay ? itemsOn(viewDay) : [];
+      out.push(['Events', items.filter(onSchedule).length], ['Due', items.filter(function (it) { return !onSchedule(it); }).length], ['Late', late.length, late.length ? 'bad' : '']);
+    } else if (which === 'focus') {
+      var row = focus.log.filter(function (r) { return r.day === keyOf(new Date()); })[0];
+      var three = todayBig3();
+      out.push(['Focused', (row ? row.minutes : 0) + 'm'], ['Three', three.filter(function (x) { return x.done; }).length + '/' + three.length], ['Timer', focusRunning() ? mmss(focusRemaining()) : 'idle', focusRunning() ? 'hud' : '']);
+    } else if (which === 'tasks') {
+      out.push(['Open', open.length], ['Next 24h', open.filter(function (t) { return within(t, 86400000); }).length], ['Late', late.length, late.length ? 'bad' : '']);
+    } else if (which === 'grades') {
+      var o = gr.data && gr.data.summary;
+      if (o) out.push(['GPA', o.gpa != null ? o.gpa.toFixed(2) : '—', 'hud'], ['Courses', o.courses.filter(function (c) { return !c.archived; }).length], ['Watch', o.atRisk.length, o.atRisk.length ? 'warn' : '']);
+    } else if (which === 'news') {
+      if (newsData) out.push(['Stories', (newsData.stories || []).length], ['Updated', newsAt ? ago(new Date(newsAt).toISOString()) : '—']);
+    } else if (which === 'finance') {
+      var fs = finData && finData.summary;
+      if (fs) out.push(['Due 7d', fs.upcoming.filter(function (u) { return !u.paid && !u.income && u.daysAway <= 7; }).length], ['Overdue', fs.overdue.length, fs.overdue.length ? 'bad' : ''], ['To do', (finData.setup || []).length]);
+    } else if (which === 'health') {
+      var hs = hx.data && hx.data.summary;
+      if (hs) out.push(['Calories', hxNum(hs.calories.eaten)], ['Sleep', hs.sleep.lastNight ? hxHours(hs.sleep.lastNight.hours) : '—'], ['Water', hxNum(hs.water.today)]);
+    } else if (which === 'files') {
+      if (dropsList) out.push(['Files', dropsList.length], ['Review', filesToReview(), filesToReview() ? 'hud' : ''], ['Reading', dropsList.filter(function (d) { return d.status === 'scanning'; }).length]);
+    } else if (which === 'sleep') {
+      var sc = sleepCfg();
+      out.push(['Dims after', sc.idleMinutes ? sc.idleMinutes + 'm' : 'off']);
+    } else if (which === 'accounts') {
+      var ga = (google && google.accounts) || [];
+      out.push(['Google', ga.length ? ga.length + ' linked' : 'none', ga.some(function (a) { return a.needsReconnect || a.lastError; }) ? 'warn' : ''], ['AI', ai.status ? (ai.status.hasKey ? 'ready' : 'no key') : '—'], ['Synced', ago(latestSync())]);
+    } else if (which === 'guide') {
+      var steps = guideSteps();
+      out.push(['Setup', steps.filter(function (x) { return x.done; }).length + '/' + steps.length]);
+    }
+  } catch (e) {}
+  return out;
+}
+
+function hudBar(which) {
+  var name = ((TABS.filter(function (t) { return t.id === which; })[0]) || {}).name || 'Mellow';
+  return '<div class="hud-bar"><span class="hud-id"><i class="hud-dot"></i>Mellow<em>//</em>' + esc(name) + '</span>' +
+    '<span class="hud-tel">' + hudTelemetry(which).map(function (x) {
+      return '<span class="' + (x[2] || '') + '"><small>' + esc(x[0]) + '</small>' + esc(String(x[1])) + '</span>';
+    }).join('') + '</span>' +
+    '<span class="hud-clock" data-hud-clock>' + hudClockText() + '</span></div>';
+}
+
+setInterval(function () {
+  if (document.hidden) return;
+  var els = document.querySelectorAll('[data-hud-clock]');
+  if (!els.length) return;
+  var t = hudClockText();
+  for (var i = 0; i < els.length; i++) els[i].textContent = t;
+}, 1000);
+
+/** A ring gauge: ticks round the edge, the filled arc, a slow dashed ring inside. frac is 0 to 1. */
+function hudRing(frac, color, cls) {
+  frac = Math.max(0, Math.min(1, frac || 0));
+  var c = 2 * Math.PI * 42, ticks = '';
+  for (var i = 0; i < 48; i++) {
+    var a = i * 7.5 * Math.PI / 180, r1 = i % 4 ? 47.4 : 45.8;
+    ticks += '<line x1="' + (50 + Math.sin(a) * r1).toFixed(2) + '" y1="' + (50 - Math.cos(a) * r1).toFixed(2) + '" x2="' + (50 + Math.sin(a) * 49.4).toFixed(2) + '" y2="' + (50 - Math.cos(a) * 49.4).toFixed(2) + '"' + (i % 4 ? '' : ' class="maj"') + '/>';
+  }
+  return '<svg class="hud-ring' + (cls ? ' ' + cls : '') + '" viewBox="0 0 100 100" style="--rc:' + color + '" aria-hidden="true">' +
+    '<g class="tk">' + ticks + '</g><circle cx="50" cy="50" r="42" class="tr"/>' +
+    (frac > 0.002 ? '<circle cx="50" cy="50" r="42" class="ar" stroke-dasharray="' + (frac * c).toFixed(2) + ' ' + c.toFixed(2) + '" transform="rotate(-90 50 50)"/>' : '') +
+    '<circle cx="50" cy="50" r="36" class="in"/></svg>';
+}
+
+/* ============================================================================
+   Suggested imports: the files that would fill in what Mellow is missing.
+
+   Worked out from what's already here: a course with no syllabus in Files and
+   no grading breakdown, a grading breakdown waiting to be added, Finance's own
+   list of exports it lacks, no calendar at all. "Not now" hides one for two
+   weeks, in this browser.
+   ============================================================================ */
+var IMP_KEY = 'mellow-import-hidden';
+function impHidden() { try { return JSON.parse(localStorage.getItem(IMP_KEY) || '{}') || {}; } catch (e) { return {}; } }
+function hideImport(id) {
+  var h = impHidden(), now = Date.now();
+  Object.keys(h).forEach(function (k) { if (h[k] < now) delete h[k]; });
+  h[id] = now + 14 * 86400000;
+  try { localStorage.setItem(IMP_KEY, JSON.stringify(h)); } catch (e) {}
+}
+
+function codeKey(s) { return String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); }
+
+var COURSE_RE = /^\s*([A-Z]{2,5}(?:\s*\/\s*[A-Z]{2,5})*)\s*-?\s*(\d{2,4}[A-Z]?)(?![0-9])/i;
+/** Every code a course goes by, without its section: "GOV 113-2" is GOV 113; "AFR/DAN 119" is both AFR 119 and DAN 119. Same as the engine's. */
+function courseKeys(s) {
+  var m = COURSE_RE.exec(String(s || ''));
+  if (!m) { var k = codeKey(s); return k ? [k] : []; }
+  return m[1].toUpperCase().split('/').map(function (p) { return p.trim() + m[2].toUpperCase(); });
+}
+function sameCourse(a, b) { var kb = courseKeys(b); return courseKeys(a).some(function (k) { return kb.indexOf(k) !== -1; }); }
+
+/** Course codes this term: from Grades, from deadlines, and from classes on the calendar, one entry a course. */
+function knownCourses() {
+  var list = [];
+  var add = function (code, name) {
+    var keys = courseKeys(code).filter(function (k) { return k.length >= 4 && /[A-Z]/.test(k) && /\d/.test(k); });
+    if (!keys.length) return;
+    var m = COURSE_RE.exec(String(code).toUpperCase());
+    var shown = m ? m[1].replace(/\s+/g, '') + ' ' + m[2] : String(code).trim().toUpperCase();
+    var hit = list.filter(function (c) { return c.keys.some(function (k) { return keys.indexOf(k) !== -1; }); })[0];
+    if (!hit) return list.push({ keys: keys, key: keys[0], code: shown, name: name || '' });
+    keys.forEach(function (k) { if (hit.keys.indexOf(k) === -1) hit.keys.push(k); });
+    // A course listed under one code reads better than its cross-listing.
+    if (keys.length === 1 && shown.indexOf('/') === -1 && hit.code.indexOf('/') !== -1) hit.code = shown;
+    if (name && !hit.name) hit.name = name;
+  };
+  ((gr.data && gr.data.courses) || []).forEach(function (c) { if (!c.archived && c.code) add(c.code, c.name); });
+  var since = Date.now() - 120 * 86400000;
+  ((state && state.tasks) || []).forEach(function (t) {
+    var due = t.dueAt || t.nextDueAt;
+    if (t.course && (!due || new Date(due).getTime() > since)) add(t.course);
+  });
+  ((cal && cal.days) || []).forEach(function (d) { (d.items || []).forEach(function (it) { var c = it.course || splitCourse(it.title || '').course; if (c) add(c); }); });
+  return list;
+}
+
+function hasSyllabusFor(course) {
+  return (dropsList || []).some(function (d) {
+    if (d.status === 'error' || d.status === 'blocked') return false;
+    if (d.grading && d.grading.course && course.keys.some(function (k) { return courseKeys(d.grading.course).indexOf(k) !== -1; })) return true;
+    if (d.documentKind !== 'syllabus' && d.folder !== 'syllabus') return false;
+    var text = codeKey((d.title || '') + ' ' + (d.name || ''));
+    return course.keys.some(function (k) { return text.indexOf(k) !== -1; });
+  });
+}
+
+function importSuggestions() {
+  var list = [], hidden = impHidden(), now = Date.now();
+  (dropsList || []).forEach(function (d) {
+    if (d.status !== 'ready' || !d.grading || d.gradingAdded) return;
+    list.push({ id: 'grading:' + d.id, scope: 'grades', rank: 0, icon: I.grade, title: (d.grading.course || d.title || d.name) + ': grading breakdown found',
+      why: d.grading.categories.map(function (k) { return k.name + ' ' + k.weight + '%'; }).join(' · '),
+      how: 'Read from ' + (d.title || d.name) + '. Adding it sets up the course in Grades, or updates it.',
+      button: '<button class="btn primary sm" data-gr-from-file="' + esc(d.id) + '">' + I.plus + ' Add to Grades</button>' });
+  });
+  if (dropsList) {
+    knownCourses().forEach(function (c) {
+      var g = gr.data && gr.data.courses ? gr.data.courses.filter(function (x) { return x.code && courseKeys(x.code).some(function (k) { return c.keys.indexOf(k) !== -1; }); })[0] : null;
+      if (hasSyllabusFor(c) || (g && g.categories && g.categories.length)) return;
+      list.push({ id: 'syllabus:' + c.key, scope: 'grades', rank: 1, icon: I.book, section: 'grades', title: 'The ' + c.code + ' syllabus',
+        why: 'Every due date and exam, ready to add to your calendar, and how ' + c.code + ' is graded, for Grades.',
+        how: 'In Canvas: the course, then Syllabus or Files, then download it. A PDF, a Word file or a clear photo of a printed one all work.' });
+    });
+  }
+  if (gr.data && gr.data.summary) {
+    gr.data.summary.courses.forEach(function (c) {
+      if (c.archived || !c.weighted || c.count) return;
+      list.push({ id: 'scores:' + c.id, scope: 'grades', rank: 2, icon: I.chart, section: 'grades', title: (c.code || c.name) + ' scores so far',
+        why: 'A screenshot of the course\'s grades page fills in every score at once, each in its part of the grade.',
+        how: 'In Canvas: the course, then Grades. Screenshot the list (crop out your student ID) and drop it here.' });
+    });
+  }
+  ((finData && finData.setup) || []).forEach(function (s) {
+    if (/^fin-setup:import/.test(s.id)) {
+      list.push({ id: s.id, scope: 'finance', rank: s.rank === 1 ? 1 : 2, icon: I.money, section: 'finance', title: s.id === 'fin-setup:import' ? 'Your bank transactions, as a .csv' : 'A fresh bank export',
+        why: s.why, how: 'Your bank\'s website: the account, then Activity or Statements, then Download or Export as CSV. It\'s read on this computer and never sent anywhere.' });
+    } else if (/^fin-setup:card:/.test(s.id)) {
+      list.push({ id: s.id, scope: 'finance', rank: 2, icon: I.ticket, section: 'finance', title: String(s.title || '').replace(/^Finish the /, '').replace(/ details$/, '') + ' statement summary',
+        why: s.why, how: 'A screenshot of just the summary box at the top of the statement. Crop out the full card number and your address.' });
+    }
+  });
+  if (cal && !cal.connected) {
+    list.push({ id: 'schedule', scope: 'today', rank: 1, icon: I.calendar, section: 'today', title: 'Your class schedule',
+      why: 'Your classes go on Today and repeat every week, without connecting Google.',
+      how: 'Export a .ics calendar from your school portal, or drop a screenshot of your weekly schedule.' });
+  }
+  return list.filter(function (x) { return !(hidden[x.id] > now); }).sort(function (a, b) { return a.rank - b.rank; });
+}
+
+/**
+ * The suggestions for one part of Mellow. scope: 'grades', 'finance', 'today',
+ * or 'all'. opts.max caps the list; opts.compact is one short row a
+ * suggestion, for Today; opts.minRank hides the less pressing ones.
+ */
+function importSuggestHtml(scope, opts) {
+  opts = opts || {};
+  // Once a visit: the library and Grades, so a course with a syllabus or a breakdown isn't asked for again.
+  if (!importSuggestHtml.asked && location.protocol !== 'file:') {
+    importSuggestHtml.asked = true;
+    Promise.all([dropsList ? null : refreshDrops(), gr.data || gr.at ? null : refreshGrades()])
+      .then(function () { if (tab === 'today' || tab === 'files' || tab === 'grades') render(); });
+  }
+  var all = importSuggestions().filter(function (x) {
+    return (scope === 'all' || x.scope === scope || (opts.also || []).indexOf(x.scope) !== -1) && (opts.maxRank == null || x.rank <= opts.maxRank);
+  });
+  if (!all.length) return '';
+  var shown = all.slice(0, opts.max || 4);
+  return '<div class="card imp enter' + (opts.compact ? ' compact' : '') + '">' +
+    '<div class="imp-head"><i class="hud-dot"></i><span class="eyebrow">' + esc(opts.title || 'Suggested imports') + '</span><span class="imp-n">' + all.length + '</span>' +
+      (all.length > shown.length ? '<button class="btn ghost sm" data-go="files">See all ' + all.length + '</button>' : '') + '</div>' +
+    shown.map(function (x) {
+      return '<div class="imp-row"><span class="imp-ic">' + x.icon + '</span><div class="imp-t"><b>' + esc(x.title) + '</b><span>' + esc(x.why) + '</span>' +
+        (x.how && !opts.compact ? '<small>' + esc(x.how) + '</small>' : '') + '</div>' +
+        '<div class="imp-a">' + (x.button || '<button class="btn sm primary" data-scan-file="' + esc(x.section) + '">' + I.upload + ' Choose file</button>') +
+        '<button class="icon-btn" data-imp-hide="' + esc(x.id) + '" title="Not now (hides it for two weeks)" aria-label="Not now">' + I.close + '</button></div></div>';
+    }).join('') + '</div>';
+}
+
+/* ============================================================================
+   Grades
+
+   Courses, how each is graded, and every score, with where that leaves you:
+   the grade now, the range it can still finish in, and what the rest needs
+   for the grade you're aiming at. Kept in engine/grades.json. A syllabus
+   dropped in Files brings its grading breakdown; a screenshot of a grades
+   page brings its scores; the assistant logs what you tell it.
+   ============================================================================ */
+var gr = { data: null, at: 0, sel: null, form: null, err: '', kDraft: null, whatIf: {} };
+try { gr.sel = localStorage.getItem('mellow-grades-course') || null; } catch (e) {}
+var GR_NOT_ON = 'Mellow is still running the version from before Grades. Restart it to switch Grades on.';
+var GR_LETTERS = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'F'];
+
+function refreshGrades() {
+  if (location.protocol === 'file:') return Promise.resolve();
+  gr.at = Date.now();
+  return authGet('/api/grades').then(function (d) {
+    if (d._status === 404) gr.data = { error: GR_NOT_ON };
+    else if (d._status === 200 && d.summary) gr.data = d;
+    else if (!gr.data || gr.data.error) gr.data = { error: d.error || 'Couldn\'t load your grades.' };
+  }).catch(function () { if (!gr.data) gr.data = { error: 'Couldn\'t reach the engine for your grades.' }; })
+    .then(function () { if (tab === 'grades') render(); else if (state) renderChrome(); });
+}
+
+function grPost(path, payload) {
+  return post(path, payload).then(function (res) {
+    if (res.status === 404) gr.data = { error: GR_NOT_ON };
+    else if (!res.ok) gr.err = (res.body && res.body.error) || 'That didn\'t save.';
+    else { gr.err = ''; if (res.body.grades) { gr.data = res.body.grades; gr.at = Date.now(); } }
+    if (!res.ok && res.status !== 404 && !gr.form) toast(gr.err);
+    if (tab === 'grades') render();
+    return res;
+  });
+}
+
+function grCourse(id) { return gr.data && gr.data.courses ? gr.data.courses.filter(function (c) { return c.id === id; })[0] || null : null; }
+function grSum(id) { return gr.data && gr.data.summary ? gr.data.summary.courses.filter(function (c) { return c.id === id; })[0] || null : null; }
+function grPct(n) { return n == null ? '—' : (Math.round(n * 10) / 10) + '%'; }
+function grNum(n) { return n == null ? '—' : String(Math.round(n * 100) / 100); }
+function grLetterFor(pct, scale) {
+  if (pct == null || !scale || !scale.length) return '';
+  for (var i = 0; i < scale.length; i++) if (pct >= scale[i].min - 1e-9) return scale[i].letter;
+  return scale[scale.length - 1].letter;
+}
+
+/** Where a course stands against its target, in words, and the colour that goes with it. */
+function grStatus(s) {
+  var n = s && s.needed;
+  if (!n) return { cls: '', color: 'var(--hud)', text: s && s.count ? (s.weighted ? '' : 'Add how it\'s graded to see what the rest needs') : 'No scores yet' };
+  if (n.status === 'locked') return { cls: 'good', color: 'var(--good)', text: n.letter + ' is locked in, whatever comes next' };
+  if (n.status === 'made') return { cls: 'good', color: 'var(--good)', text: 'Finished at ' + n.letter + ' or better' };
+  if (n.status === 'missed') return { cls: 'bad', color: 'var(--bad)', text: 'Finished below ' + n.letter };
+  if (n.status === 'out-of-reach') return { cls: 'bad', color: 'var(--bad)', text: n.letter + ' would take ' + n.percent + '% on what\'s left' };
+  if (!s.count) return { cls: '', color: 'var(--hud)', text: n.letter + ' needs ' + n.percent + '% overall' };
+  return { cls: n.status === 'stretch' ? 'warn' : 'hud', color: n.status === 'stretch' ? 'var(--warn)' : 'var(--hud)', text: 'Needs ' + n.percent + '% on the remaining ' + n.leftWeight + '% for ' + n.letter };
+}
+
+function grTasksFor(code) {
+  if (!code || !state) return [];
+  return state.tasks.filter(function (t) { return t.course && sameCourse(t.course, code) && !t.done && (t.dueAt || t.nextDueAt); })
+    .sort(function (a, b) { return new Date(a.dueAt || a.nextDueAt) - new Date(b.dueAt || b.nextDueAt); });
+}
+
+function grWhatIf(s, v) {
+  var left = s.totalWeight - s.gradedWeight;
+  var earned = s.earnedWeight != null ? s.earnedWeight : (s.percent || 0) * s.gradedWeight;
+  var f = (earned + v * left) / s.totalWeight;
+  return { pct: Math.round(f * 10) / 10, letter: grLetterFor(Math.round(f * 100) / 100, s.scale) };
+}
+
+function grSpark(vals) {
+  if (!vals || vals.length < 2) return '';
+  var W = 110, H = 28, n = vals.length;
+  var lo = Math.min.apply(null, vals.concat([60]));
+  var pts = vals.map(function (v, i) { return [(i * W / (n - 1)), (H - 3 - (Math.min(v, 100) - lo) / ((100 - lo) || 1) * (H - 6))]; });
+  var last = pts[n - 1];
+  return '<svg class="gr-spark" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true"><polyline points="' +
+    pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '"/><circle cx="' + last[0].toFixed(1) + '" cy="' + last[1].toFixed(1) + '" r="2.4"/></svg>';
+}
+
+function grRange(s) {
+  if (s.min == null) return '';
+  return '<div class="gr-range" title="The lowest it can finish at is ' + s.min + '%, if everything left scores zero; the highest is ' + s.max + '%, with full marks on the rest">' +
+    '<div class="rb"><i class="band" style="left:' + s.min + '%;width:' + Math.max(0.6, s.max - s.min) + '%"></i>' +
+      (s.targetMin != null ? '<i class="tgt" style="left:' + s.targetMin + '%"><em>' + esc(s.target) + '</em></i>' : '') +
+      (s.percent != null ? '<i class="now" style="left:' + Math.min(100, s.percent) + '%"></i>' : '') + '</div>' +
+    '<div class="rl"><span>' + s.min + '%</span><span>possible finish</span><span>' + s.max + '%</span></div></div>';
+}
+
+function grCatBars(s) {
+  if (!s.categories.length) return '<div class="gr-nocat">' + I.book + 'No grading breakdown yet. Drop the syllabus.</div>';
+  return '<div class="gr-cats">' + s.categories.map(function (k) {
+    return '<div class="gc" style="flex:' + Math.max(6, k.weight) + ' 1 0" title="' + esc(k.name + ': ' + k.weight + '% of the grade' + (k.percent != null ? ', averaging ' + k.percent + '% over ' + plural(k.count, 'score') : ', nothing graded yet')) + '">' +
+      '<i><b style="width:' + (k.percent == null ? 0 : Math.min(100, k.percent)) + '%"></b></i><span>' + esc(k.name) + '</span><em>' + k.weight + '%</em></div>';
+  }).join('') + '</div>';
+}
+
+function grQuip(o) {
+  var active = o.courses.filter(function (c) { return !c.archived; });
+  if (!active.length) return 'Your courses, how each is graded, and every score you get back. Drop a syllabus and the weights fill themselves in.';
+  var bits = [];
+  if (o.gpa != null) bits.push('GPA <b>' + o.gpa.toFixed(2) + '</b> across ' + plural(active.filter(function (c) { return c.points != null; }).length, 'course'));
+  else bits.push(plural(active.length, 'course') + ', no scores yet');
+  var watch = active.filter(function (c) { return o.atRisk.indexOf(c.id) !== -1; });
+  bits.push(watch.length ? esc(watch.map(function (c) { return c.code || c.name; }).join(' and ')) + ' could use a look' : active.some(function (c) { return c.count; }) ? 'every course on track' : 'log scores as they come back');
+  return bits.join('. ') + '.';
+}
+
+function viewGrades() {
+  var d = gr.data, o = d && d.summary;
+  var html = pageHead(esc((o && o.settings && o.settings.term) || 'This term'), 'Grades',
+    o ? grQuip(o) : 'Your courses, how each is graded, and every score you get back.');
+  if (!d) { if (!gr.at) refreshGrades(); return html + emptyHtml(I.grade, 'Loading your grades'); }
+  if (d.error) return html + '<div class="alert warn enter" style="margin:0 0 18px">' + I.alert + '<div class="txt"><b>Grades isn\'t on yet.</b> ' + esc(d.error) + '</div>' + (d.error === GR_NOT_ON ? restartButtonHtml() : '') + '</div>';
+  var sel = gr.sel ? grCourse(gr.sel) : null;
+  if (gr.sel && !sel) gr.sel = null;
+  return html + (sel ? grDetailHtml(sel, grSum(sel.id)) : grOverviewHtml(o));
+}
+
+function grOverviewHtml(o) {
+  var active = o.courses.filter(function (c) { return !c.archived; });
+  var past = o.courses.filter(function (c) { return c.archived; });
+  var watch = active.filter(function (c) { return o.atRisk.indexOf(c.id) !== -1; });
+  var html = '<div class="card gr-hud enter">' +
+    '<div class="gr-gpa">' + hudRing(o.gpa != null ? o.gpa / 4 : 0, 'var(--hud)', 'lg') + '<div class="gv"><b>' + (o.gpa != null ? o.gpa.toFixed(2) : '—') + '</b><span>GPA' + (o.gpa != null ? ' / 4.00' : '') + '</span></div></div>' +
+    '<div class="gr-read"><div class="gr-tiles">' +
+      '<div><small>Average</small><b>' + grPct(o.average) + '</b></div>' +
+      '<div><small>Credits</small><b>' + grNum(o.credits || 0) + '</b></div>' +
+      '<div><small>Courses</small><b>' + active.length + '</b></div>' +
+      '<div><small>Scores</small><b>' + o.graded + '</b></div></div>' +
+      '<div class="gr-alerts">' + (watch.length ? watch.map(function (c) {
+        var st = grStatus(c);
+        return '<button class="gr-alert ' + st.cls + '" data-gr-open="' + esc(c.id) + '"><i></i><b>' + esc(c.code || c.name) + '</b><span>' + esc(st.text) + '</span>' + I.arrow + '</button>';
+      }).join('') : '<div class="gr-alert ok"><i></i><span>' + (active.some(function (c) { return c.count; }) ? 'Every course is on track for the grade you\'re aiming at.' : active.length ? 'Log scores as they come back, and Mellow keeps count.' : 'Add your courses to start.') + '</span></div>') + '</div>' +
+    '</div></div>';
+
+  html += '<div class="section-head"><h2>Courses</h2><span class="sub">' + plural(active.length, 'course') + '</span><span class="right gr-head-acts">' +
+    '<button class="btn sm" data-scan-file="grades" title="A syllabus, or a screenshot of a grades page">' + I.upload + ' Drop a syllabus</button>' +
+    '<button class="btn sm primary" data-gr-form="course">' + I.plus + ' Add course</button></span></div>';
+  if (gr.form === 'course') html += grCourseForm(null);
+  if (!active.length) {
+    html += emptyHtml(I.grade, 'No courses yet', 'Add one by hand, or drop its syllabus: Mellow reads how the course is graded and sets it up for you.',
+      '<div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn primary sm" data-gr-form="course">' + I.plus + ' Add course</button><button class="btn sm" data-scan-file="grades">' + I.upload + ' Drop a syllabus</button></div>');
+  } else {
+    html += '<div class="gr-grid">' + active.map(grCardHtml).join('') + '</div>';
+  }
+  var sugg = importSuggestHtml('grades', { max: 3, title: 'Mellow suggests' });
+  if (sugg) html += '<div class="gr-sugg">' + sugg + '</div>';
+  if (past.length) html += '<div class="section-head"><h2>Past courses</h2><span class="sub">Archived, and left out of your GPA</span></div><div class="gr-grid past">' + past.map(grCardHtml).join('') + '</div>';
+  return html;
+}
+
+function grCardHtml(s) {
+  var st = grStatus(s);
+  var next = grTasksFor(s.code)[0];
+  var cc = colorFor(s.code || s.name) || 'var(--accent)';
+  return '<div class="card gr-card lift enter" role="button" tabindex="0" data-gr-open="' + esc(s.id) + '" style="--c:' + esc(cc) + '">' +
+    '<div class="gh">' + chip(s.code || s.name, cc) + '<span class="tag" title="The grade you\'re aiming at">' + esc(s.target ? 'Target ' + s.target : 'No target') + '</span></div>' +
+    (s.name && s.code ? '<div class="gn">' + esc(s.name) + '</div>' : '') +
+    '<div class="gm"><div class="gring">' + hudRing(s.percent == null ? 0 : s.percent / 100, st.color) + '<div class="gv"><b>' + esc(s.letter || '—') + '</b><span>' + (s.percent == null ? 'no scores' : grPct(s.percent)) + '</span></div></div>' +
+      '<div class="gs"><div class="gst ' + st.cls + '">' + esc(st.text) + '</div>' + grRange(s) + '</div></div>' +
+    grCatBars(s) +
+    '<div class="gf">' + (next ? '<span class="gnext">' + I.clock + '<span>Next: <b>' + esc(next.title) + '</b> · ' + esc(countdown(next.dueAt || next.nextDueAt).text) + '</span></span>'
+      : '<span class="gnext muted">' + plural(s.count, 'score') + ' logged</span>') + grSpark(s.trend) + '</div></div>';
+}
+
+function grDetailHtml(c, s) {
+  var st = grStatus(s), cc = colorFor(c.code || c.name) || 'var(--accent)';
+  var def = (gr.data.summary.settings && gr.data.summary.settings.defaultTarget) || 'A-';
+  var meta = [c.instructor, c.credits != null ? plural(c.credits, 'credit') : '', c.term, c.source && c.source.type === 'file' && c.source.name ? 'Set up from ' + c.source.name : ''].filter(Boolean);
+  var html = '<button class="btn ghost sm" data-gr-back="1" style="margin:0 0 10px -8px">' + I.left + ' All courses</button>';
+  html += '<div class="card gr-top enter" style="--c:' + esc(cc) + '">' +
+    '<div class="gt-ring">' + hudRing(s.percent == null ? 0 : s.percent / 100, st.color, 'lg') + '<div class="gv"><b>' + esc(s.letter || '—') + '</b><span>' + (s.percent == null ? 'no scores' : grPct(s.percent)) + '</span></div></div>' +
+    '<div class="gt-main"><div class="gt-code">' + chip(c.code || c.name, cc) + (c.archived ? '<span class="tag">Archived</span>' : '') + '</div><h2>' + esc(c.name || c.code) + '</h2>' +
+      (meta.length ? '<div class="gt-meta">' + meta.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div>' : '') +
+      '<div class="gt-target"><label>Aiming for <select data-gr-target="' + esc(c.id) + '" aria-label="Target grade"><option value="">Default (' + esc(def) + ')</option>' +
+        s.scale.map(function (r) { return '<option' + (r.letter === c.target ? ' selected' : '') + '>' + esc(r.letter) + '</option>'; }).join('') + '</select></label>' +
+        (st.text ? '<span class="gst ' + st.cls + '">' + esc(st.text) + '</span>' : '') + '</div>' +
+      grRange(s) + '</div>' +
+    '<div class="gt-acts"><button class="btn sm" data-gr-form="edit-course">Edit course</button><button class="btn sm" data-gr-grading="1">Edit grading</button>' +
+      '<button class="btn ghost sm" data-gr-archive="' + esc(c.id) + '">' + (c.archived ? 'Bring back' : 'Archive') + '</button>' +
+      '<button class="btn ghost sm" data-gr-del-course="' + esc(c.id) + '" title="Delete this course and its scores">' + I.trash + '</button></div></div>';
+  if (gr.form === 'edit-course') html += grCourseForm(c);
+  if (gr.form === 'grading') html += grGradingForm(c);
+
+  var left = s.weighted ? Math.round((s.totalWeight - s.gradedWeight) * 10) / 10 : 0;
+  if (s.weighted && left > 0.05) {
+    var v = gr.whatIf[c.id] != null ? gr.whatIf[c.id] : Math.round(s.percent != null ? s.percent : 85);
+    var wi = grWhatIf(s, v);
+    html += '<div class="card gr-whatif enter" data-gr-whatif="' + esc(c.id) + '"><span class="eyebrow">What if</span>' +
+      '<label for="gr-wi">If you average</label><input type="range" id="gr-wi" min="0" max="100" step="1" value="' + v + '"><b class="wi-v">' + v + '%</b>' +
+      '<span>on the remaining ' + left + '%, you finish with</span><b class="wi-f">' + wi.pct + '% · ' + esc(wi.letter) + '</b></div>';
+  }
+
+  html += '<div class="fin-cols gr-cols"><div>';
+  var cats = {};
+  c.categories.forEach(function (k) { cats[k.id] = k.name; });
+  html += '<div class="section-head"><h2>Scores</h2><span class="sub">' + plural(s.count, 'score') + (s.uncategorized ? ' · ' + s.uncategorized + ' not counted yet' : '') + '</span>' +
+    '<span class="right gr-head-acts"><button class="btn sm" data-scan-file="grades" title="A screenshot of this course\'s grades page">' + I.upload + ' Drop a screenshot</button>' +
+    '<button class="btn sm primary" data-gr-form="grade">' + I.plus + ' Add score</button></span></div>';
+  if (gr.form === 'grade') html += grGradeForm(c, null);
+  var list = c.grades.slice().sort(function (a, b) { return String(b.date || b.at).localeCompare(String(a.date || a.at)); });
+  html += '<div class="fin-list">' + (list.length ? list.map(function (g) {
+    if (gr.form === 'grade:' + g.id) return grGradeForm(c, g);
+    var pct = g.outOf ? Math.round(1000 * g.score / g.outOf) / 10 : null;
+    var col = pct == null ? 'var(--hud)' : pct >= (s.targetMin != null ? s.targetMin : 90) ? 'var(--good)' : pct >= 70 ? 'var(--hud)' : 'var(--warn)';
+    return '<div class="fin-row gr-row' + (g.excused ? ' is-paid' : '') + '"><div style="min-width:0"><div class="nm">' + esc(g.title) + '</div><div class="sub">' +
+        (g.category && cats[g.category] ? '<span class="pill">' + esc(cats[g.category]) + '</span>' : c.categories.length && !g.excused ? '<span class="pill soon" title="It doesn\'t count until it has a part of the grade. Edit it to choose one.">No part yet</span>' : '') +
+        (g.date ? '<span>' + esc(dateOfKey(g.date).toLocaleDateString([], { month: 'short', day: 'numeric' })) + '</span>' : '') +
+        (g.excused ? '<span class="tag">Excused</span>' : '') + (g.extraCredit ? '<span class="tag">Extra credit</span>' : '') +
+        (g.source === 'assistant' ? '<span class="tag">Assistant</span>' : g.source === 'file' ? '<span class="tag">From a file</span>' : '') + '</div></div>' +
+      '<div class="amt">' + grNum(g.score) + '<small>of ' + grNum(g.outOf) + ' · ' + grPct(pct) + '</small><span class="gr-bar"><i style="width:' + Math.min(100, pct || 0) + '%;background:' + col + '"></i></span></div>' +
+      '<div class="acts"><button class="btn ghost sm" data-gr-form="grade:' + esc(g.id) + '">Edit</button><button class="btn ghost sm" data-gr-del="' + esc(g.id) + '" title="Delete" aria-label="Delete">✕</button></div></div>';
+  }).join('') : '<div class="fin-empty">No scores yet. Add them as they come back, tell the assistant ("I got 42 out of 50 on the midterm"), or drop a screenshot of the course\'s grades page.</div>') + '</div>';
+
+  html += '</div><div>';
+  html += '<div class="section-head"><h2>Grading</h2><span class="sub">' + (s.weighted ? plural(s.categories.length, 'part') + ', adding up to ' + s.totalWeight + '%' : 'Not set yet') + '</span><span class="right"><button class="btn sm" data-gr-grading="1">Edit</button></span></div>';
+  if (!c.categories.length) {
+    html += '<div class="card imp compact enter"><div class="imp-row"><span class="imp-ic">' + I.book + '</span><div class="imp-t"><b>Drop the ' + esc(c.code || c.name) + ' syllabus</b><span>Mellow reads how the course is graded and fills this in, along with every due date worth adding.</span></div>' +
+      '<div class="imp-a"><button class="btn primary sm" data-scan-file="grades">' + I.upload + ' Choose file</button></div></div></div>';
+  } else {
+    html += '<div class="gr-ktable">' + s.categories.map(function (k) {
+      var have = k.count + (k.dropped || 0);
+      return '<div class="gk"><div class="gk-n"><b>' + esc(k.name) + '</b><span>' + (k.expected ? have + ' of ' + k.expected + ' graded' : k.count ? plural(k.count, 'score') : 'Nothing graded yet') +
+          (k.dropped ? ', lowest ' + k.dropped + ' dropped' : k.drop ? ' · drops the lowest ' + k.drop : '') + '</span></div>' +
+        '<div class="gk-w">' + k.weight + '%</div><div class="gk-p">' + grPct(k.percent) + '</div>' +
+        '<div class="gk-bar"><i style="width:' + (k.percent == null ? 0 : Math.min(100, k.percent)) + '%"></i></div></div>';
+    }).join('') + '</div>';
+    if (Math.abs(s.totalWeight - 100) > 0.5) html += '<div class="quiet-note">The parts add up to ' + s.totalWeight + '%, not 100%. The grade is worked out from the parts there are.</div>';
+    if (s.uncounted) html += '<div class="quiet-note gr-hint">' + I.alert + '<span>Say how many there are in ' + (s.uncounted === 1 ? 'the part' : 'the ' + s.uncounted + ' parts') + ' with scores (<button class="link-inline" data-gr-grading="1">Edit</button>). Until then, one score counts as the whole part, so what you need leaves out work still to come.</span></div>';
+    if (s.customScale) html += '<div class="gr-scale">' + s.scale.filter(function (r) { return r.letter !== 'F'; }).map(function (r) { return '<span><b>' + esc(r.letter) + '</b>' + r.min + '</span>'; }).join('') + '</div>';
+  }
+  var upcoming = grTasksFor(c.code).slice(0, 6);
+  html += '<div class="section-head"><h2>Coming up</h2><span class="sub">' + (upcoming.length ? 'From Tasks' : '') + '</span></div>' +
+    (upcoming.length ? '<div class="fin-list">' + upcoming.map(function (t) {
+      var due = t.dueAt || t.nextDueAt, cd = countdown(due);
+      return '<div class="fin-row"><div style="min-width:0"><div class="nm">' + esc(t.title) + '</div><div class="sub"><span class="tag">' + (t.kind === 'exam' ? 'Exam' : 'Due') + '</span><span>' + esc(relDay(due)) + '</span></div></div>' +
+        '<div class="amt"><span class="pill ' + cd.cls + '">' + esc(cd.text) + '</span></div><div></div></div>';
+    }).join('') + '</div>' : '<div class="fin-empty">Nothing due for ' + esc(c.code || c.name) + '. Deadlines with this course code show up here.</div>');
+  html += '</div></div>';
+  return html;
+}
+
+function grCourseForm(c) {
+  c = c || {};
+  var def = (gr.data && gr.data.summary && gr.data.summary.settings.defaultTarget) || 'A-';
+  return '<div class="card fin-form gr-form enter" data-keep="1"><div class="form-title">' + (c.id ? 'Edit ' + esc(c.code || c.name) : 'Add a course') + '</div>' +
+    '<label>Course code<input id="gr-c-code" placeholder="ECO 112" autocomplete="off" value="' + esc(c.code || '') + '"></label>' +
+    '<label>Name<input id="gr-c-name" placeholder="Macroeconomics" autocomplete="off" value="' + esc(c.name || '') + '"></label>' +
+    '<label>Credits<input id="gr-c-credits" type="number" min="0" max="12" step="0.5" inputmode="decimal" value="' + esc(c.credits != null ? c.credits : 3) + '"></label>' +
+    '<label>Aiming for<select id="gr-c-target"><option value="">Default (' + esc(def) + ')</option>' + GR_LETTERS.map(function (l) { return '<option' + (l === c.target ? ' selected' : '') + '>' + l + '</option>'; }).join('') + '</select></label>' +
+    '<label>Instructor<input id="gr-c-inst" placeholder="Optional" autocomplete="off" value="' + esc(c.instructor || '') + '"></label>' +
+    '<div class="form-acts"><button class="btn primary sm" data-gr-save="course"' + (c.id ? ' data-id="' + esc(c.id) + '"' : '') + '>Save</button><button class="btn ghost sm" data-gr-cancel="1">Cancel</button>' +
+      (!c.id ? '<span class="hint">Or drop its syllabus, and how it\'s graded comes with it.</span>' : '') +
+      (gr.err ? '<div class="err">' + esc(gr.err) + '</div>' : '') + '</div></div>';
+}
+
+/* The parts of a grade are edited as a draft (gr.kDraft), so adding or removing a row never mixes up what's typed in the others. */
+function grGradingForm(c) {
+  if (!gr.kDraft) {
+    gr.kDraft = c.categories.length ? c.categories.map(function (k) { return { id: k.id, name: k.name, weight: k.weight, count: k.count || '', drop: k.drop || 0 }; })
+      : [{ name: 'Exams', weight: 50, count: '', drop: 0 }, { name: 'Homework', weight: 30, count: '', drop: 0 }, { name: 'Participation', weight: 20, count: '', drop: 0 }];
+  }
+  var total = gr.kDraft.reduce(function (a, k) { return a + (Number(k.weight) || 0); }, 0);
+  return '<div class="card gr-form gr-kform enter"><div class="form-title">How ' + esc(c.code || c.name) + ' is graded</div>' +
+    '<div class="gk-edit gk-labels"><span>Part of the grade</span><span>Weight %</span><span title="How many graded items this part has, like 3 exams">How many</span><span>Drop lowest</span><span></span></div>' +
+    gr.kDraft.map(function (k, i) {
+      return '<div class="gk-edit"><input id="gr-k-' + i + '-name" data-gr-k="' + i + '|name" value="' + esc(k.name) + '" placeholder="Exams" aria-label="Part of the grade">' +
+        '<input id="gr-k-' + i + '-weight" data-gr-k="' + i + '|weight" type="number" min="0" max="100" step="0.5" inputmode="decimal" value="' + esc(k.weight) + '" aria-label="Weight, percent">' +
+        '<input id="gr-k-' + i + '-count" data-gr-k="' + i + '|count" type="number" min="0" max="100" step="1" inputmode="numeric" placeholder="?" value="' + esc(k.count || '') + '" aria-label="How many graded items">' +
+        '<input id="gr-k-' + i + '-drop" data-gr-k="' + i + '|drop" type="number" min="0" max="20" step="1" inputmode="numeric" value="' + esc(k.drop || 0) + '" aria-label="Lowest scores dropped">' +
+        '<button class="icon-btn" data-gr-k-del="' + i + '" title="Remove" aria-label="Remove">' + I.close + '</button></div>';
+    }).join('') +
+    '<div class="gk-foot"><button class="btn ghost sm" data-gr-k-add="1">' + I.plus + ' Add a part</button><span class="gk-total' + (Math.abs(total - 100) > 0.5 ? ' off' : '') + '" id="gr-k-total">Total ' + Math.round(total * 10) / 10 + '%</span></div>' +
+    '<div class="form-acts"><button class="btn primary sm" data-gr-save="grading" data-id="' + esc(c.id) + '">Save</button><button class="btn ghost sm" data-gr-cancel="1">Cancel</button>' +
+      '<span class="hint">Weights are each part\'s share of the final grade, from the syllabus. How many lets Mellow count the work still to come.</span>' +
+      (gr.err ? '<div class="err">' + esc(gr.err) + '</div>' : '') + '</div></div>';
+}
+
+function grGradeForm(c, g) {
+  g = g || {};
+  var today = keyOf(new Date());
+  return '<div class="card fin-form gr-form enter" data-keep="1"><div class="form-title">' + (g.id ? 'Edit score' : 'Add a score') + '</div>' +
+    '<label class="wide">What was it<input id="gr-g-title" placeholder="Midterm 1" autocomplete="off" value="' + esc(g.title || '') + '"></label>' +
+    '<label>Score<input id="gr-g-score" type="number" step="any" min="0" inputmode="decimal" placeholder="42" value="' + esc(g.score != null ? g.score : '') + '"></label>' +
+    '<label>Out of<input id="gr-g-out" type="number" step="any" min="0" inputmode="decimal" placeholder="50" value="' + esc(g.outOf != null ? g.outOf : '') + '"></label>' +
+    '<label>Part of the grade<select id="gr-g-cat"><option value="">' + (c.categories.length ? 'Guess from the name' : 'No breakdown yet') + '</option>' +
+      c.categories.map(function (k) { return '<option value="' + esc(k.id) + '"' + (k.id === g.category ? ' selected' : '') + '>' + esc(k.name) + '</option>'; }).join('') +
+      (c.categories.length ? '<option value="none"' + (g.id && !g.category ? ' selected' : '') + '>None</option>' : '') + '</select></label>' +
+    '<label>Date<input id="gr-g-date" type="date" max="' + today + '" value="' + esc(g.id ? g.date || '' : today) + '"></label>' +
+    '<label class="tick"><input type="checkbox" id="gr-g-exc"' + (g.excused ? ' checked' : '') + '>Excused</label>' +
+    '<label class="tick"><input type="checkbox" id="gr-g-xc"' + (g.extraCredit ? ' checked' : '') + '>Extra credit</label>' +
+    '<div class="form-acts"><button class="btn primary sm" data-gr-save="grade"' + (g.id ? ' data-id="' + esc(g.id) + '"' : '') + '>Save</button><button class="btn ghost sm" data-gr-cancel="1">Cancel</button>' +
+      '<span class="hint">Only have a percentage? Put it as the score, out of 100.</span>' +
+      (gr.err ? '<div class="err">' + esc(gr.err) + '</div>' : '') + '</div></div>';
+}
+
+/** Adds a syllabus's grading breakdown from Files. */
+function grFromFile(id, btn) {
+  if (btn) btn.disabled = true;
+  return grPost('/api/grades/from-file', { id: id }).then(function (res) {
+    if (btn) btn.disabled = false;
+    if (!res.ok) { if (res.status === 404) toast(GR_NOT_ON); return; }
+    var c = grCourse(res.body.id);
+    if (res.body.drop) dropsList = (dropsList || []).map(function (x) { return x.id === id ? withFolder(res.body.drop) : x; });
+    var name = c ? c.code || c.name : 'The course';
+    toast(name + (res.body.created ? ' is set up in Grades.' : '\'s grading is updated.'), 'Open', function () { gr.sel = res.body.id; gr.form = null; switchTab('grades'); });
+    render();
+  });
+}
+
+function grCloseForms() {
+  gr.form = null; gr.kDraft = null; gr.err = '';
+  document.querySelectorAll('.gr-form').forEach(function (f) { f.remove(); });
+}
+
+document.addEventListener('click', function (ev) {
+  if (!ev.target.closest) return;
+  var el = ev.target.closest('[data-gr-open],[data-gr-go],[data-gr-back],[data-gr-form],[data-gr-cancel],[data-gr-save],[data-gr-del],[data-gr-del-course],[data-gr-archive],[data-gr-grading],[data-gr-k-add],[data-gr-k-del],[data-gr-from-file],[data-imp-hide]');
+  if (!el) return;
+  var v = function (id) { var e = document.getElementById(id); return e ? (e.type === 'checkbox' ? e.checked : e.value) : undefined; };
+
+  if (el.hasAttribute('data-imp-hide')) {
+    hideImport(el.getAttribute('data-imp-hide'));
+    toast('Hidden for two weeks.');
+    return render();
+  }
+  if (el.hasAttribute('data-gr-from-file')) return grFromFile(el.getAttribute('data-gr-from-file'), el);
+  if (el.hasAttribute('data-gr-open') || el.hasAttribute('data-gr-go')) {
+    gr.sel = el.getAttribute('data-gr-open') || el.getAttribute('data-gr-go');
+    grCloseForms();
+    try { localStorage.setItem('mellow-grades-course', gr.sel); } catch (e) {}
+    if (tab !== 'grades') return switchTab('grades');
+    animateNextRender(); render();
+    return window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  if (el.hasAttribute('data-gr-back')) {
+    gr.sel = null; grCloseForms();
+    try { localStorage.removeItem('mellow-grades-course'); } catch (e) {}
+    animateNextRender(); return render();
+  }
+  if (el.hasAttribute('data-gr-form') || el.hasAttribute('data-gr-grading')) {
+    var which = el.hasAttribute('data-gr-grading') ? 'grading' : el.getAttribute('data-gr-form');
+    grCloseForms();
+    gr.form = which;
+    render();
+    var first = document.querySelector('.gr-form input');
+    if (first) { first.focus({ preventScroll: true }); first.closest('.gr-form').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    return;
+  }
+  if (el.hasAttribute('data-gr-cancel')) { grCloseForms(); return render(); }
+  if (el.hasAttribute('data-gr-k-add')) {
+    (gr.kDraft = gr.kDraft || []).push({ name: '', weight: '', drop: 0 });
+    render();
+    var added = document.getElementById('gr-k-' + (gr.kDraft.length - 1) + '-name');
+    if (added) added.focus();
+    return;
+  }
+  if (el.hasAttribute('data-gr-k-del')) { if (gr.kDraft) gr.kDraft.splice(+el.getAttribute('data-gr-k-del'), 1); return render(); }
+  if (el.hasAttribute('data-gr-save')) {
+    var what = el.getAttribute('data-gr-save'), id = el.getAttribute('data-id') || undefined, req;
+    if (what === 'course') {
+      req = grPost('/api/grades/course', { course: { id: id, code: v('gr-c-code'), name: v('gr-c-name'), credits: v('gr-c-credits'), target: v('gr-c-target'), instructor: v('gr-c-inst') } });
+    } else if (what === 'grading') {
+      req = grPost('/api/grades/course', { course: { id: id, categories: (gr.kDraft || []).filter(function (k) { return String(k.name).trim(); }) } });
+    } else {
+      req = grPost('/api/grades/grade', { course: gr.sel, grade: { id: id, title: v('gr-g-title'), score: v('gr-g-score'), outOf: v('gr-g-out'), category: v('gr-g-cat'), date: v('gr-g-date'), excused: v('gr-g-exc'), extraCredit: v('gr-g-xc') } });
+    }
+    el.disabled = true;
+    return req.then(function (res) {
+      el.disabled = false;
+      if (!res.ok) return;
+      if (what === 'course' && !id && res.body.id) { gr.sel = res.body.id; try { localStorage.setItem('mellow-grades-course', gr.sel); } catch (e) {} }
+      grCloseForms();
+      toast(what === 'grade' ? (id ? 'Score updated.' : 'Score added.') : what === 'grading' ? 'Grading saved.' : id ? 'Course saved.' : 'Course added. Now add how it\'s graded, or drop its syllabus.');
+      render();
+    });
+  }
+  if (el.hasAttribute('data-gr-del')) {
+    var course = grCourse(gr.sel), gid = el.getAttribute('data-gr-del');
+    var g = course && course.grades.filter(function (x) { return x.id === gid; })[0];
+    return grPost('/api/grades/grade/delete', { course: gr.sel, id: gid }).then(function (res) {
+      if (!res.ok || !g) return;
+      toast('Deleted ' + g.title + '.', 'Undo', function () {
+        var copy = Object.assign({}, g); delete copy.id;
+        grPost('/api/grades/grade', { course: course.id, grade: copy });
+      });
+    });
+  }
+  if (el.hasAttribute('data-gr-archive')) {
+    var ac = grCourse(el.getAttribute('data-gr-archive'));
+    if (!ac) return;
+    return grPost('/api/grades/course', { course: { id: ac.id, archived: !ac.archived } }).then(function (res) {
+      if (res.ok) toast(ac.archived ? (ac.code || ac.name) + ' is back in your GPA.' : (ac.code || ac.name) + ' is archived and left out of your GPA.');
+    });
+  }
+  if (el.hasAttribute('data-gr-del-course')) {
+    var dc = grCourse(el.getAttribute('data-gr-del-course'));
+    if (!dc || !window.confirm('Delete ' + (dc.code || dc.name) + (dc.grades.length ? ' and its ' + plural(dc.grades.length, 'score') : '') + '?\n\nThis can\'t be undone. Archive it instead to keep it out of your GPA.')) return;
+    return grPost('/api/grades/course/delete', { id: dc.id }).then(function (res) {
+      if (!res.ok) return;
+      gr.sel = null;
+      try { localStorage.removeItem('mellow-grades-course'); } catch (e) {}
+      toast('Deleted ' + (dc.code || dc.name) + '.');
+      render();
+    });
+  }
+});
+
+/* Typing in the grading draft, the what-if slider, and the target. */
+document.addEventListener('input', function (ev) {
+  var el = ev.target;
+  if (!el.matches) return;
+  if (el.matches('[data-gr-k]')) {
+    var p = el.getAttribute('data-gr-k').split('|'), row = gr.kDraft && gr.kDraft[+p[0]];
+    if (!row) return;
+    row[p[1]] = p[1] === 'name' ? el.value : el.value === '' ? '' : Number(el.value);
+    var total = gr.kDraft.reduce(function (a, k) { return a + (Number(k.weight) || 0); }, 0);
+    var t = document.getElementById('gr-k-total');
+    if (t) { t.textContent = 'Total ' + Math.round(total * 10) / 10 + '%'; t.classList.toggle('off', Math.abs(total - 100) > 0.5); }
+    return;
+  }
+  if (el.id === 'gr-wi') {
+    var box = el.closest('[data-gr-whatif]'), s = box && grSum(box.getAttribute('data-gr-whatif'));
+    if (!s) return;
+    var val = +el.value, out = grWhatIf(s, val);
+    gr.whatIf[s.id] = val;
+    box.querySelector('.wi-v').textContent = val + '%';
+    box.querySelector('.wi-f').textContent = out.pct + '% · ' + out.letter;
+  }
+});
+document.addEventListener('change', function (ev) {
+  var el = ev.target;
+  if (el.matches && el.matches('[data-gr-target]')) grPost('/api/grades/course', { course: { id: el.getAttribute('data-gr-target'), target: el.value } });
+});
+document.addEventListener('keydown', function (ev) {
+  if (!ev.target.closest) return;
+  var card = ev.target.closest('.gr-card[data-gr-open]');
+  if (card && ev.target === card && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); return card.click(); }
+  var form = ev.target.closest('.gr-form');
+  if (!form) return;
+  if (ev.key === 'Enter' && ev.target.tagName !== 'SELECT' && ev.target.type !== 'checkbox' && !ev.target.closest('button')) {
+    ev.preventDefault();
+    var b = form.querySelector('[data-gr-save]');
+    if (b && !b.disabled) b.click();
+  } else if (ev.key === 'Escape') {
+    grCloseForms();
+    render();
+  }
+});
 
 /* ============================================================================
    Focus: the part that keeps you on one thing.
@@ -9796,11 +11462,12 @@ function switchTab(next) {
   if (tab === 'news' && Date.now() - newsAt > 60000) refreshNews(false);
   if (tab === 'files') refreshDrops();
   if (tab === 'health' && Date.now() - hx.at > 15000) refreshHealth();
+  if (tab === 'grades' && Date.now() - gr.at > 15000) refreshGrades();
   if (tab === 'finance') {
     if (Date.now() - finAt > 20000) refreshFinance();
     if (Date.now() - finBriefAt > 5 * 60000) refreshFinBrief(false);
   }
-  if (tab === 'guide') { try { localStorage.setItem('ratchet-guide-seen', '1'); } catch (e) {} loadSetup(true).then(function () { if (tab === 'guide') render(); }); }
+  if (tab === 'guide') { try { localStorage.setItem('ratchet-guide-seen', '1'); } catch (e) {} loadSetup(true).then(function (answered) { if (answered && tab === 'guide') render(); }); }
   if (history.replaceState) history.replaceState(null, '', '#' + tab);
   animateNextRender();
   render();
@@ -10514,7 +12181,7 @@ function openHelp() {
   var d = document.createElement('div');
   d.className = 'help-backdrop';
   d.innerHTML = '<div class="card help"><div class="eyebrow">Keyboard</div><h3 style="margin-top:6px">Shortcuts</h3>' +
-    [['Today', '1'], ['ADHD tools', '2'], ['Tasks', '3'], ['News', '4'], ['Finance', '5'], ['Health', 'H'], ['Files', '6'], ['Sleep screen settings', '7'], ['Accounts', '8'], ['Guide', '9'], ['Assistant', 'A'], ['Talk to Mellow (voice)', 'Ctrl Space'],
+    [['Today', '1'], ['ADHD tools', '2'], ['Tasks', '3'], ['Grades', 'R'], ['News', '4'], ['Finance', '5'], ['Health', 'H'], ['Files', '6'], ['Sleep screen settings', '7'], ['Accounts', '8'], ['Guide', '9'], ['Assistant', 'A'], ['Talk to Mellow (voice)', 'Ctrl Space'],
      ['Get going: focus on the next thing', 'G'], ['Park a thought', 'Q'], ['Organize this page', 'O'], ['Day, week or month', 'D W M'], ['Back or forward', '← →'], ['Back to today', 'T'],
      ['Sleep now', 'Z'], ['Night mode, only the time', 'N'], ['Morning briefing', 'B'], ['Full screen', 'F'], ['Sync now', 'S'], ['This list', '?'], ['Close', 'Esc']]
       .map(function (r) { return '<div class="row"><span>' + r[0] + '</span><kbd>' + r[1] + '</kbd></div>'; }).join('') + '</div>';

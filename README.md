@@ -87,6 +87,9 @@ from anywhere, and a file dropped anywhere is read and filed in **Files**.
   on a tab counts what you haven't opened yet, like unread mail, and those items
   are marked **New** while you look; this is remembered per device. Anything
   found automatically can be confirmed one at a time or all at once.
+- **Grades** (`R`) is every course with its grade now, the grade you're aiming
+  for, what the rest of the work needs to get there, and your GPA (see Grades,
+  below).
 - **News** is today's biggest stories, ranked.
 - **Finance** is your accounts, bills, budgets, holdings and goals, with a
   morning money brief on top.
@@ -108,8 +111,12 @@ Start menu shortcut from `make-desktop-app.ps1` opens it that way.
 
 The look is black, white and one blue: white carries the content, blue marks
 where you are and what moves you forward (the current section, today, progress,
-primary buttons), and red and amber are kept for late and due soon. It is dark
-everywhere, whatever the system setting. The type is Instrument Serif for
+primary buttons), and red and amber are kept for late and due soon. Over that
+sits a quiet heads-up display in cyan, which only ever means "the system": a
+status line across the top of every page with that page's key numbers and a
+clock, ring gauges, lit panel edges, a faint grid, status lights for the
+engine, Google and the assistant, and one soft sweep of light when you change
+page. It is dark everywhere, whatever the system setting. The type is Instrument Serif for
 headings and numbers, Geist for text and Geist Mono for labels, loaded from
 Google Fonts. Offline, each falls back to a system font and nothing else
 changes. On touch screens keyboard hints are hidden, buttons are larger, and
@@ -118,7 +125,7 @@ inputs are sized so iOS does not zoom in on them.
 Marking something done offers an Undo for five minutes. The streak
 counts days in a row with at least one thing done; passes do not count toward
 it. Keyboard: `1` to `8` switch sections (Today, Tasks, News, Finance, Files,
-Sleep screen, Accounts, Guide), `A` opens the assistant, `D` `W` `M` pick day, week or month, `←` `→` change day, `T` is today,
+Sleep screen, Accounts, Guide), `R` is Grades, `A` opens the assistant, `D` `W` `M` pick day, week or month, `←` `→` change day, `T` is today,
 `F` is full screen, `S` syncs, `Z` starts the sleep screen, `?` lists shortcuts.
 
 ## News
@@ -260,7 +267,10 @@ calendar, tasks or money:
 2. **It is summarised,** with up to six key facts kept at hand: office hours,
    grading weights, a professor's email, an amount owed.
 3. **Mellow looks for what could be added:** class meetings, events,
-   deadlines, exams, to-dos, bills, paydays, transactions and credit cards. Each
+   deadlines, exams, to-dos, bills, paydays, transactions, credit cards, and
+   scores from a screenshot of a grades page. A syllabus's grading breakdown
+   (the parts of the grade, their weights, how many of each, the letter
+   cut-offs) comes with it, with **Add to Grades**. Each
    is checked against what is already in Mellow; one already on your calendar,
    already a deadline, or already a bill that day is marked so and left
    unticked. Tick what is right, fix anything wrong, and press **Add ticked
@@ -285,6 +295,44 @@ is still there next term, and the assistant can answer questions about any of
 them. **Open** shows the original (PDFs and pictures in the browser, anything
 textual as plain text, never run as a web page). Deleting a file keeps anything
 you already added from it.
+
+**Suggested imports.** Mellow works out which files would fill in what it's
+missing and says so, with where to find each one: the syllabus of any course
+on your calendar, deadlines or Grades that has neither a syllabus in Files nor
+a grading breakdown; a screenshot of a course's grades page once it has a
+breakdown and no scores; a grading breakdown already found but not added; the
+bank export or card statement Finance is waiting for; and a class schedule
+when there is no calendar. Files lists them all, Grades its own, and Today the
+one that matters most. **Not now** hides one for two weeks, in that browser.
+Course codes are matched without their section, so GOV 113-2 is GOV 113, and a
+cross-listed AFR/DAN 119 is the same course as DAN 119.
+
+## Grades
+
+Each course has a code, credits, the grade you're aiming for, and how it's
+graded: parts like Exams 45%, Problem sets 25% (lowest one dropped), each with
+how many there are. Drop the syllabus and that fills itself in; or type it
+under **Edit grading**. Scores come from the **Add score** form, from the
+assistant ("I got 42 out of 50 on the ECO midterm"), or from a screenshot of
+the course's grades page dropped in Files. A score is put in its part by what
+it's called (a quiz goes in Quizzes) unless you choose.
+
+For each course Mellow shows:
+
+- **The grade now**, weighted the way Canvas shows it, as a percentage and a
+  letter, on the syllabus's own scale when it has one.
+- **The range it can still finish in**: every remaining score zero, or every
+  one full marks.
+- **What the rest needs** for the grade you're aiming for, counting the work
+  still to come in each part (one exam of three leaves two thirds of Exams).
+  A part with scores but no count is treated as finished, and the page says so.
+- **What if**: drag to an average on the rest and see where you'd finish.
+- **Coming up**: that course's deadlines and exams from Tasks.
+
+The page opens on your GPA (letters weighted by credits), the courses that
+could use a look, and a card per course. **Archive** a finished course to keep
+it but leave it out of your GPA. Everything is in `engine/grades.json`; the
+assistant sees grades unless `shareWithAi` there is set to false.
 
 ## The assistant
 
@@ -471,11 +519,56 @@ You can also paste the address of any image on the web.
 Sunday. Done early on Saturday, it counts for Sunday. A completion always pays
 off the oldest missed occurrence first, so the debt shrinks one at a time.
 
+## Your Mellow account
+
+One account owns everything: your calendar, grades, money, files and the Google
+accounts you connect. It is not a Google sign-in and not an account on anybody's
+server: an email, a name and a password in `engine/account.json`, on the
+computer running Mellow.
+
+- **Made once, on the computer** (Accounts, or the Guide's checklist). The
+  computer itself is then trusted: the desktop app never asks for the password,
+  because anything that can reach `127.0.0.1` could read the files anyway.
+- **Every other device signs in** with that email and password and gets a
+  session of its own, instead of typing the `token` from `engine-config.json`.
+  Until it does, it cannot read anything: not the calendar, not grades, not
+  money. Sessions last a year, and each one shows in **Signed in** on Accounts
+  with a **Sign out** button.
+- **The password** is kept as a scrypt hash with a random salt, and only the
+  hash of a session token is stored, so a copy of the file lets nobody in.
+  Guessing over the network slows down after five tries, per address. Changing
+  the password signs every other device out; from the computer it can be
+  changed without the old one, which is the way back in if it's forgotten.
+- **Google accounts are connected to it afterwards**, as many as you like.
+  Google asks which account every time, so there is no accidental sign-in with
+  whichever Gmail the browser happens to be in.
+
+A copy with no account behaves as it always did: open on this machine, and the
+`token` for anything else.
+
 ## Google: homework, email and calendars
 
-Connect your school and personal Google accounts once, following
-[GOOGLE-SETUP.md](GOOGLE-SETUP.md). After that the engine re-reads them every
-ten minutes, with read-only access.
+Connect your school and personal Google accounts once, on **Accounts**. Until
+there's a sign-in client, Accounts shows a checklist with a button for each
+step in Google Cloud (project, the two APIs in one go, the sign-in screen,
+Publish app, a Desktop client), ticks off what you've done, and takes the
+downloaded file with **Choose file** or a drop anywhere on Mellow. The file is
+saved as `engine/client_secret_<id>.json` and never goes into Files, even if
+it's dropped on the Files page. [GOOGLE-SETUP.md](GOOGLE-SETUP.md) has the same
+steps written out. After that the engine re-reads your accounts every ten
+minutes, with read-only access.
+
+Each account remembers the client that signed it in, so adding a new client
+later only changes new sign-ins. A sync error about a switched-off API, or an
+app still in Testing, comes with a button to the right page in Google Cloud.
+
+**A shared sign-in.** If `engine/google-shared-client.json` is present, Accounts
+skips the checklist and just offers **Connect**; a client of your own still
+wins. Whoever publishes Mellow can ship one with a release (see the end of
+GOOGLE-SETUP.md for how, and Google's limits: 100 accounts before
+verification, and verification for Gmail's restricted scope beyond that). The
+packager includes it, refuses one from your own Cloud project, and the repo's
+`.gitignore` keeps it out of GitHub; updates replace it like code.
 
 **Homework** comes from the school account. An email or calendar entry becomes
 an assignment when it reads as schoolwork and carries a deadline: a Canvas
@@ -768,10 +861,20 @@ the moment a second machine points at this one.
 `engine-config.json` binds to `127.0.0.1`. That is right while the PC is the only
 client, and it means the write endpoints need no authentication.
 
-To let a Mac reach it over Tailscale, change `bindHost` to your Tailscale address
-and **set a token in the same edit**. Without one, anyone who can reach the port
-can mark your tasks done. The engine logs a warning at startup if you open the
-port and leave the token empty.
+The easy way is the Guide: **Phone & tablet**, **Let my devices in**. That
+writes this computer's home Wi-Fi and Tailscale addresses into `bindHost`
+(**Tailscale only** is a second button), keeps the notes in the file, and
+creates a `token` if there isn't one, a twelve-character password shown once to
+type on the phone. **Restart now** appears when the Windows or Mac app (or a
+start file) launched the engine, which starts it again on the new addresses
+(`/api/app/restart` exits with code 75). **Shut other devices out** puts back
+`127.0.0.1`. Both are refused from anywhere but this computer and from other
+websites.
+
+By hand: to let a Mac reach it over Tailscale, change `bindHost` to your
+Tailscale address and **set a token in the same edit**. Without one, anyone who
+can reach the port can mark your tasks done. The engine logs a warning at
+startup if you open the port and leave the token empty.
 
 ---
 
@@ -791,8 +894,13 @@ What your friend gets: a clean `engine-config.json` (no name, localhost only),
 two example weekly tasks, example stocks, no news subscriptions, enforcement
 back in dry run, and `START-HERE.md` (from `FRIENDS.md`), which takes them
 through installing Node.js and double-clicking **`start-ratchet.cmd`**. They
-make their own Google client (`GOOGLE-SETUP.md`) and use their own Anthropic
-key.
+make their own Google client with the checklist on Accounts (or use the shared
+one, if you ship `engine/google-shared-client.json`) and use their own
+Anthropic key.
+
+Questions, help getting set up, and suggestions go to the **Mellow Discord**,
+<https://discord.gg/j8xJXhXFe5>. It's linked from mellow-track.com and from
+the end of the Guide's troubleshooting.
 
 Mellow is shared under the **PolyForm Noncommercial License 1.0.0**
 (`LICENSE.txt`): anyone you give it to can use it, change it and pass it on,
@@ -829,6 +937,8 @@ and nobody can sell it. Put your name in `LICENSE.txt` if you want the credit.
 | `engine/ai-key.txt` | Your Anthropic API key. Never served, never read by the assistant. |
 | `engine/ai-usage.json` | This month's AI spend. Written by the engine. |
 | `engine/drops/`, `engine/drops.json` | **Files:** everything you dropped, your folders, and what was found in each. |
+| `engine/grades.json` | **Grades:** your courses, how each is graded, and every score. |
+| `engine/lib/grades.js` | Weighted grades, what the rest needs, GPA, and grading breakdowns from a syllabus. |
 | `engine/assistant/` | Conversations, and backups of every file the assistant changed. |
 | `engine/news-detected.json` | Papers your inbox suggests you subscribe to: which, and when. |
 | `engine/lib/ai/claude.js` | The Messages API over HTTPS: the key, retries, spend and the monthly limit. |
@@ -846,7 +956,9 @@ and nobody can sell it. Put your name in `LICENSE.txt` if you want the credit.
 | `engine/auto-tasks.json` | What the sync found, and what you confirmed or dismissed. Written by the engine. |
 | `engine/google-accounts.json` | Connected accounts and their roles. Written by the engine. |
 | `engine/google-tokens.json` | Google sign-ins. Never served, locked to SYSTEM by `lock-folder.ps1`. |
-| `engine/client_secret_*.json` | Your Google OAuth client, from GOOGLE-SETUP.md. |
+| `engine/client_secret_*.json` | Your Google OAuth client, chosen on Accounts or moved here by hand. Never packaged. |
+| `engine/google-shared-client.json` | Optional: a shared Google client shipped with a release, so friends can skip making their own. |
+| `engine/account.json` | **Your Mellow account:** email, name, the password as a hash, and the devices signed in. Never packaged. |
 | `engine/engine.js` | The HTTP server and the API. |
 | `engine/lib/schedule.js` | Cadences, deadlines, the ladder, the union rule. |
 | `engine/lib/store.js` | Reading and writing those files, atomically. |

@@ -156,6 +156,20 @@ section { padding: 96px 0; }
 .trio .card p { margin: 0; color: var(--muted); font-size: 15px; }
 .trio .card svg { width: 22px; height: 22px; color: var(--good); }
 
+/* community */
+.discord { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 40px; align-items: center; padding: 44px; border-radius: 22px; border: 1px solid rgba(88, 101, 242, .38);
+  background: radial-gradient(700px 320px at 0% 0%, rgba(88, 101, 242, .22), transparent 70%), linear-gradient(180deg, #0f1024, #0a0b12); }
+.discord h2 { font: 400 clamp(34px, 4vw, 50px)/1.02 var(--serif); margin: 12px 0 14px; }
+.discord p { color: var(--ink-2); margin: 0 0 24px; max-width: 520px; }
+.btn.blurple { border: 0; color: #fff; background: linear-gradient(180deg, #6c78ff, #5865f2); box-shadow: 0 10px 30px -10px rgba(88, 101, 242, .9), inset 0 1px 0 rgba(255, 255, 255, .2); }
+.btn.blurple:hover { box-shadow: 0 14px 36px -10px rgba(88, 101, 242, 1), inset 0 1px 0 rgba(255, 255, 255, .2); }
+.channels { display: flex; flex-direction: column; gap: 8px; }
+.channel { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; align-items: center; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line-strong); background: rgba(5, 5, 6, .55); }
+.channel .hash { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: #aab2ff; background: rgba(88, 101, 242, .14); box-shadow: inset 0 0 0 1px rgba(88, 101, 242, .35); }
+.channel .hash svg { width: 18px; height: 18px; }
+.channel b { display: block; font-size: 15px; }
+.channel span { color: var(--muted); font-size: 13.5px; }
+
 /* faq */
 .faq { max-width: 820px; }
 .faq details { border-bottom: 1px solid var(--line); padding: 18px 0; }
@@ -179,7 +193,8 @@ footer .r { margin-left: auto; }
 @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } .app { transform: none; } html { scroll-behavior: auto; } }
 
 @media (max-width: 960px) {
-  .hero, .install, .band { grid-template-columns: minmax(0, 1fr); }
+  .hero, .install, .band, .discord { grid-template-columns: minmax(0, 1fr); }
+  .discord { padding: 30px 24px; gap: 26px; }
   .hero { padding-top: 56px; gap: 44px; }
   .app { transform: none; }
   .grid, .trio { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
@@ -223,13 +238,17 @@ footer .r { margin-left: auto; }
     <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M17 6l3 3M15 8l2 2"/></symbol>
     <symbol id="i-node" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 2.5 20.5 7.5v9L12 21.5 3.5 16.5v-9L12 2.5Z"/></symbol>
     <symbol id="i-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m4 7 8 6 8-6"/></symbol>
+    <symbol id="i-grade" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5"/><path d="m8.5 17.5 2.3-6.5 2.3 6.5M9.3 15.4h3"/><path d="M15.5 12.5v3M14 14h3"/></symbol>
+    <symbol id="i-import" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11M7.5 9.5 12 14l4.5-4.5"/><path d="M4 15v3.5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V15"/><circle cx="19" cy="5" r="2" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.8-2.5 2.2-2.5 3.9M12 17h.01"/></symbol>
+    <symbol id="i-discord" viewBox="0 0 24 24" fill="currentColor"><path d="M19.6 5.2A17.6 17.6 0 0 0 15.3 3.9l-.55 1.1a16.3 16.3 0 0 0-5.5 0L8.7 3.9a17.5 17.5 0 0 0-4.3 1.3C1.7 9.2.95 13.1 1.3 17a17.7 17.7 0 0 0 5.35 2.7l1.15-1.85a11.4 11.4 0 0 1-1.8-.87l.44-.34a12.6 12.6 0 0 0 11.1 0l.44.34c-.57.34-1.18.63-1.8.87l1.15 1.85A17.6 17.6 0 0 0 22.7 17c.42-4.5-.72-8.4-3.1-11.8ZM8.3 14.6c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2 1.97.99 1.95 2.2c0 1.21-.86 2.2-1.95 2.2Zm7.4 0c-1.07 0-1.95-.99-1.95-2.2s.86-2.2 1.95-2.2 1.97.99 1.95 2.2c0 1.21-.86 2.2-1.95 2.2Z"/></symbol>
   </defs>
 </svg>
 
 <nav>
   <div class="wrap">
     <a class="brand" href="#top"><img src="icon.png" alt=""><b>Mellow</b></a>
-    <div class="links"><a href="#features">Features</a><a href="#install">Install</a><a href="#updates">Updates</a><a href="#privacy">Privacy</a><a href="#faq">FAQ</a></div>
+    <div class="links"><a href="#features">Features</a><a href="#install">Install</a><a href="#updates">Updates</a><a href="#privacy">Privacy</a><a href="#community">Community</a><a href="#faq">FAQ</a></div>
     <a class="btn sm primary js-download" data-dl="auto" href="#download"><svg><use href="#i-down"/></svg>Download</a>
   </div>
 </nav>
@@ -255,7 +274,7 @@ footer .r { margin-left: auto; }
     <div class="app reveal" aria-label="A picture of Mellow's Subscriptions page with sample numbers">
       <div class="bar"><i></i><i></i><i></i></div>
       <div class="body">
-        <div class="side"><b>Mellow.</b><span>Today</span><span>Tasks</span><span>News</span><span class="on">Finance</span><span>Health</span><span>Sleep screen</span></div>
+        <div class="side"><b>Mellow.</b><span>Today</span><span>Tasks</span><span>Grades</span><span>News</span><span class="on">Finance</span><span>Health</span><span>Sleep screen</span></div>
         <div class="main">
           <div class="tabs"><span>Overview</span><span>Cards</span><span>Bills</span><span class="on">Subscriptions</span><span>Spending</span></div>
           <div class="eyebrow" style="font-size:9.5px">You pay for subscriptions</div>
@@ -279,12 +298,14 @@ footer .r { margin-left: auto; }
       <div class="grid">
         <div class="card feat wide reveal"><div class="ic"><svg><use href="#i-school"/></svg></div><h3>Homework finds you</h3><p>Connect your school and personal Gmail and calendars. Assignments, exams and deadlines are pulled from course emails and Canvas on their own, and so are emails still waiting on your reply. Drop in a syllabus or a flyer and Mellow suggests the dates to add.</p></div>
         <div class="card feat reveal"><div class="ic"><svg><use href="#i-cal"/></svg></div><h3>Today, week, month</h3><p>Every calendar and deadline on one timeline, with what to do next picked out for you.</p></div>
+        <div class="card feat good reveal"><div class="ic"><svg><use href="#i-grade"/></svg></div><h3>Grades</h3><p>Every course's grade now, what you need on the rest to get the grade you want, and your GPA. Drop the syllabus and the weights fill themselves in.</p></div>
         <div class="card feat violet reveal"><div class="ic"><svg><use href="#i-repeat"/></svg></div><h3>Subscriptions</h3><p>Receipts and renewals in your email become a list of what you pay, from which card, and when it renews. New ones, price rises and trials about to charge get flagged.</p></div>
-        <div class="card feat good reveal"><div class="ic"><svg><use href="#i-money"/></svg></div><h3>Your money</h3><p>Accounts, cards, bills, budgets and goals from your bank's exports. No bank logins, ever.</p></div>
+        <div class="card feat reveal"><div class="ic"><svg><use href="#i-money"/></svg></div><h3>Your money</h3><p>Accounts, cards, bills, budgets and goals from your bank's exports. No bank logins, ever.</p></div>
         <div class="card feat reveal"><div class="ic"><svg><use href="#i-spark"/></svg></div><h3>An assistant</h3><p>Ask it to add things, plan your week, look something up, or even change how Mellow looks. It asks before it changes anything.</p></div>
         <div class="card feat warn reveal"><div class="ic"><svg><use href="#i-brain"/></svg></div><h3>ADHD tools</h3><p>A focus timer, today's three, a brain dump, and one small next step when you're stuck.</p></div>
         <div class="card feat reveal"><div class="ic"><svg><use href="#i-moon"/></svg></div><h3>Sleep screen</h3><p>Leave it alone and it turns into a clock over a famous painting, with your day beside it and a morning alarm.</p></div>
-        <div class="card feat reveal"><div class="ic"><svg><use href="#i-phone"/></svg></div><h3>On your phone too</h3><p>Your computer runs Mellow and your iPad or phone opens it, with Add to Home Screen.</p></div>
+        <div class="card feat violet reveal"><div class="ic"><svg><use href="#i-import"/></svg></div><h3>Knows what to import</h3><p>It tells you which file would fill in what's missing, like a course's syllabus or your latest bank export, and where to find it.</p></div>
+        <div class="card feat wide reveal"><div class="ic"><svg><use href="#i-phone"/></svg></div><h3>On your phone too</h3><p>Your computer runs Mellow and your iPad or phone opens it, with Add to Home Screen. Everything stays on your computer; the phone is a window onto it.</p></div>
       </div>
     </div>
   </section>
@@ -304,7 +325,7 @@ footer .r { margin-left: auto; }
               <li><b>Download Mellow for Windows</b><span><a class="js-download" data-dl="win" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow-Setup.exe">Mellow-Setup.exe</a>, about 35 MB, for Windows 10 or 11. If your browser says it isn't commonly downloaded, choose <i>Keep</i>.</span></li>
               <li><b>Open it</b><span>Double-click <code>Mellow-Setup.exe</code>. If Windows says it protected your PC, click <i>More info</i>, then <i>Run anyway</i>.</span></li>
               <li><b>That's it</b><span>Mellow installs in a few seconds, adds itself to your desktop and Start menu, and opens in its own window. You can delete the download. Closing the window keeps Mellow running by the clock: right-click its icon to quit, or to start Mellow when you sign in.</span></li>
-              <li><b>Open the Guide</b><span>Press <code>9</code>. It checks what's set up and walks you through connecting Google and the rest.</span></li>
+              <li><b>Connect Google, step by step</b><span>Open <i>Accounts</i>. A checklist takes you to each page in Google Cloud with one button per step, then you choose the file you downloaded and press <i>Connect</i>. The Guide (<code>9</code>) covers the rest, like your phone.</span></li>
             </ol>
           </div>
           <div class="panel" data-panel="mac" hidden>
@@ -312,13 +333,13 @@ footer .r { margin-left: auto; }
               <li><b>Download Mellow for Mac</b><span><a class="js-download" data-dl="mac" href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow-Mac.zip">Mellow-Mac.zip</a>, about 80 MB. Works on Apple silicon and Intel Macs with macOS 13.5 or newer.</span></li>
               <li><b>Drag Mellow into Applications</b><span>Open the zip in Downloads if it didn't open itself, then drag <i>Mellow</i> into your <i>Applications</i> folder.</span></li>
               <li><b>Open it, once the long way</b><span>Double-click Mellow. The first time, your Mac says it couldn't verify it: click <i>Done</i>, go to <i>System Settings → Privacy &amp; Security</i>, scroll down and click <i>Open Anyway</i>. After that it opens like any app, in its own window.</span></li>
-              <li><b>Open the Guide</b><span>Press <code>9</code> for the rest of the setup, step by step.</span></li>
+              <li><b>Connect Google, step by step</b><span>Open <i>Accounts</i> and follow the checklist: a button for each step, then <i>Connect</i>. The Guide (<code>9</code>) covers the rest.</span></li>
             </ol>
           </div>
           <div class="panel" data-panel="phone" hidden>
             <ol class="steps">
               <li><b>Set Mellow up on a computer first</b><span>There's no App Store app: an iPhone or iPad can't run Mellow by itself. Your Windows PC or Mac runs it, and your phone opens it, with your data staying on the computer.</span></li>
-              <li><b>Let the phone reach it</b><span>In Mellow, open the Guide (<code>9</code>) → <i>Phones and tablets</i>. It shows your computer's exact address, and how to use <a href="https://tailscale.com" target="_blank" rel="noopener">Tailscale</a> to reach it away from home.</span></li>
+              <li><b>Let the phone reach it</b><span>In Mellow on the computer, open the Guide (<code>9</code>) → <i>Phone &amp; tablet</i> and press <i>Let my devices in</i>. It shows the address to open and a password for your devices. For away from home, install <a href="https://tailscale.com" target="_blank" rel="noopener">Tailscale</a> on both first.</span></li>
               <li><b>Add to Home Screen</b><span>Open that address in Safari, then <i>Share → Add to Home Screen</i>. It gets its own icon and opens full screen, like an app. It's always as up to date as your computer, so it never needs updating itself.</span></li>
             </ol>
           </div>
@@ -326,7 +347,7 @@ footer .r { margin-left: auto; }
         <div class="card need reveal">
           <h3>What you'll need</h3>
           <div class="item"><svg><use href="#i-node"/></svg><div><b>A Windows PC or a Mac <span class="tag">required</span></b><span>Windows 10 or 11, or macOS 13.5 or newer. Nothing else to install: the app brings what it needs.</span></div></div>
-          <div class="item"><svg><use href="#i-mail"/></svg><div><b>Your own Google sign-in <span class="tag">optional</span></b><span>About 20 minutes, once, to let Mellow read your Gmail and Calendar. The Guide in the app walks you through it, and Mellow can't send or delete anything.</span></div></div>
+          <div class="item"><svg><use href="#i-mail"/></svg><div><b>Your own Google sign-in <span class="tag">optional</span></b><span>About 10 minutes, once, to let Mellow read your Gmail and Calendar. The app gives you a button for each step in Google Cloud, and Mellow can't send or delete anything.</span></div></div>
           <div class="item"><svg><use href="#i-key"/></svg><div><b>An Anthropic API key <span class="tag">optional</span></b><span>For the assistant, reading dropped files and finding subscriptions. You pay Anthropic for what you use, usually a few dollars a month, with a monthly limit you set.</span></div></div>
         </div>
       </div>
@@ -344,7 +365,7 @@ footer .r { margin-left: auto; }
         </div>
         <div class="upd">
           <div class="top"><b class="js-upd-title">Mellow is out</b><span class="new">NEW</span></div>
-          <ul class="js-upd-notes"><li>Subscriptions found in your email, with every charge and renewal date</li><li>Finance in tabs, with a guide on what to drop in each</li><li>Clock styles for night mode</li></ul>
+          <ul class="js-upd-notes"><li>Grades: what you need on the rest of the term, and your GPA</li><li>Suggestions for which files to import</li><li>A new heads-up display look across the app</li></ul>
           <div class="row"><span class="js-upd-date">Accounts → Updates</span><a class="btn sm primary js-download" data-dl="auto" href="#install"><svg><use href="#i-down"/></svg>Update now</a></div>
         </div>
       </div>
@@ -353,7 +374,7 @@ footer .r { margin-left: auto; }
 
   <section id="privacy">
     <div class="wrap">
-      <div class="sec-head reveal"><div class="eyebrow">Privacy</div><h2>Yours, and on your computer.</h2><p>There's no Mellow account and no Mellow server. Nothing about you is sent anywhere unless you connect it.</p></div>
+      <div class="sec-head reveal"><div class="eyebrow">Privacy</div><h2>Yours, and on your computer.</h2><p>There's no Mellow server. Your Mellow account lives on your own computer, and nothing about you is sent anywhere unless you connect it.</p></div>
       <div class="trio">
         <div class="card reveal"><svg><use href="#i-lock"/></svg><h3>Everything stays in one folder</h3><p>Tasks, finances, health and conversations are plain files in the Mellow folder on your computer. Back it up to keep them, delete it to remove everything.</p></div>
         <div class="card reveal"><svg><use href="#i-shield"/></svg><h3>You choose what the AI sees</h3><p>Money is private by default. Card, account and Social Security numbers are masked in anything sent, and bank exports are read on your computer.</p></div>
@@ -362,10 +383,29 @@ footer .r { margin-left: auto; }
     </div>
   </section>
 
+  <section id="community">
+    <div class="wrap">
+      <div class="discord reveal">
+        <div>
+          <div class="eyebrow">Community</div>
+          <h2>Stuck, or have an idea? Come say hi.</h2>
+          <p>The Mellow Discord is the place to ask questions, get help, and tell us what Mellow should do next.</p>
+          <a class="btn big blurple" href="https://discord.gg/j8xJXhXFe5" target="_blank" rel="noopener"><svg><use href="#i-discord"/></svg>Join the Discord</a>
+        </div>
+        <div class="channels" aria-label="What the Discord is for">
+          <div class="channel"><span class="hash"><svg><use href="#i-help"/></svg></span><div><b>Ask a question</b><span>How something works, or whether Mellow can do what you need.</span></div></div>
+          <div class="channel"><span class="hash"><svg><use href="#i-key"/></svg></span><div><b>Get support</b><span>Stuck installing, connecting Google, reaching it from your phone, or adding an AI key.</span></div></div>
+          <div class="channel"><span class="hash"><svg><use href="#i-spark"/></svg></span><div><b>Suggest something</b><span>A feature you'd like, or what would make Mellow work better for you.</span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <section id="faq">
     <div class="wrap">
       <div class="sec-head reveal"><div class="eyebrow">Questions</div><h2>Good to know.</h2></div>
       <div class="faq reveal">
+        <details><summary>Do I need an account?</summary><p>You make one, and it stays on your computer: an email, a name and a password, kept in Mellow's own folder. There's no Mellow server to sign in to. It's what your data belongs to and how your phone or iPad signs in, and it's separate from Google, so you can connect as many Gmail accounts as you like without one of them being your login.</p></details>
         <details><summary>Is it really free?</summary><p>Yes. Mellow is shared under the PolyForm Noncommercial License: use it, change it, share it with friends. You just can't sell it. The optional AI features use your own Anthropic key, which you pay for as you use them.</p></details>
         <details><summary>Do I need to install anything else?</summary><p>No. The Windows and Mac apps carry Node.js, the small engine Mellow runs on, inside them. Mellow runs on your computer and shows itself in its own window.</p></details>
         <details><summary>Is there an iPhone or iPad app?</summary><p>Not in the App Store. Mellow keeps your data on your own computer, so your computer runs it and your iPhone or iPad opens it: add it to your Home Screen and it looks and works like an app. The <i>iPhone &amp; iPad</i> tab under Install shows how.</p></details>
@@ -376,7 +416,7 @@ footer .r { margin-left: auto; }
         <details><summary>I use Linux, or I'd rather run it myself</summary><p><a href="https://github.com/camppbel-ui/Mellow/releases/latest/download/Mellow.zip">Mellow.zip</a> is the plain code. Install <a href="https://nodejs.org" target="_blank" rel="noopener">Node.js</a> (LTS), unzip it, and run <code>start-ratchet.cmd</code> on Windows or <code>bash start-ratchet.command</code> anywhere else. It updates itself the same way.</p></details>
         <details><summary>Does it work without Gmail or an AI key?</summary><p>Yes. The calendar, tasks, finance, sleep screen and ADHD tools all work on their own, and <code>.ics</code> calendars and bank <code>.csv</code> exports are read without any key. Gmail adds homework and emails; the key adds the assistant and file reading.</p></details>
         <details><summary>Can it block distracting apps?</summary><p>There's an optional blocker that locks games and sites while something is overdue. It ships switched off and only logs what it would do. The <code>SETUP.md</code> file in the folder explains how to turn it on.</p></details>
-        <details><summary>Something isn't working</summary><p>Most things are covered in the Guide inside Mellow (press <code>9</code>). If the window says Mellow isn't responding, open the Mellow app again. Its log is <code>engine/app.log</code> in the folder above, if you want to send it to whoever gave you Mellow.</p></details>
+        <details><summary>Something isn't working</summary><p>Most things are covered in the Guide inside Mellow (press <code>9</code>). If the window says Mellow isn't responding, open the Mellow app again. Still stuck? Ask in the <a href="https://discord.gg/j8xJXhXFe5" target="_blank" rel="noopener">Mellow Discord</a>. Its log is <code>engine/app.log</code> in the folder above, if someone asks to see it.</p></details>
       </div>
     </div>
   </section>
@@ -393,7 +433,7 @@ footer .r { margin-left: auto; }
   <div class="wrap">
     <a class="brand" href="#top"><img src="icon.png" alt="" style="width:22px;height:22px;border-radius:6px"><b style="font-size:20px">Mellow</b></a>
     <span>Free under the PolyForm Noncommercial License.</span>
-    <span class="r"><a href="https://github.com/camppbel-ui/Mellow" target="_blank" rel="noopener">GitHub</a> · <a href="https://github.com/camppbel-ui/Mellow/releases" target="_blank" rel="noopener">All releases</a></span>
+    <span class="r"><a href="https://discord.gg/j8xJXhXFe5" target="_blank" rel="noopener">Discord</a> · <a href="https://github.com/camppbel-ui/Mellow" target="_blank" rel="noopener">GitHub</a> · <a href="https://github.com/camppbel-ui/Mellow/releases" target="_blank" rel="noopener">All releases</a></span>
   </div>
 </footer>
 

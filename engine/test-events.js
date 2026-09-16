@@ -26,7 +26,7 @@ const mail = (subject, body, extra = {}) => ({
 
 console.log('\nFinding events');
 {
-  const c = events.fromEmail(mail('Interview with Acme', 'Hi Alex,\n\nYour interview is confirmed for Thursday, September 17 at 2:00 PM.\nLocation: 500 Main St, Suite 4\n\nThanks'), 'me@x.com', NOW);
+  const c = events.fromEmail(mail('Interview with Acme', 'Hi Campbell,\n\nYour interview is confirmed for Thursday, September 17 at 2:00 PM.\nLocation: 500 Main St, Suite 4\n\nThanks'), 'me@x.com', NOW);
   check('an interview with a date and time is found', !!c);
   check('it starts at the right moment', c && c.start.getDate() === 17 && c.start.getHours() === 14);
   check('an hour long when no end is given', c && c.end - c.start === 3600000);

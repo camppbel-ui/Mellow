@@ -35,25 +35,40 @@ const TOKEN_URL = process.env.RATCHET_GOOGLE_TOKEN_URL || 'https://oauth2.google
 
 /* ------------------------------- client file ----------------------------- */
 
-/**
- * The OAuth client you created in Google Cloud. Google's download is named
- * client_secret_<long id>.json; any file matching that, or google-client.json,
- * is picked up so you do not have to rename anything.
+/*
+ * Where sign-ins come from. Two kinds of client, both "Desktop app" clients
+ * from Google Cloud:
+ *
+ *   - Your own: Google's download, client_secret_<long id>.json (or
+ *     google-client.json), put in the engine folder or chosen on the Accounts
+ *     page. Any number can sit there; the newest is used for new sign-ins.
+ *   - A shared one: google-shared-client.json, when whoever publishes Mellow
+ *     ships one with it, so a friend can connect without making their own.
+ *     Yours always wins when both are there.
+ *
+ * A refresh token only works with the client that issued it, so each account
+ * remembers its client's id and keeps using that client, whichever is newest.
  */
-function findClientFile() {
-  try {
-    const names = fs.readdirSync(ROOT);
-    const named = names.find((n) => n === 'google-client.json');
-    if (named) return path.join(ROOT, named);
-    const downloaded = names.filter((n) => /^client_secret.*\.json$/i.test(n)).sort();
-    if (downloaded.length) return path.join(ROOT, downloaded[downloaded.length - 1]);
-  } catch (_) {}
-  return null;
+const SHARED_FILE = path.join(ROOT, 'google-shared-client.json');
+const OWN_RE = /^(client_secret.*|google-client)\.json$/i;
+
+function ownClientFiles() {
+  let names = [];
+  try { names = fs.readdirSync(ROOT).filter((n) => OWN_RE.test(n)); } catch (_) {}
+  const mtime = (n) => { try { return fs.statSync(path.join(ROOT, n)).mtimeMs; } catch (_) { return 0; } };
+  // google-client.json is one you named on purpose; otherwise the newest download.
+  return names.sort((a, b) => (b === 'google-client.json') - (a === 'google-client.json') || mtime(b) - mtime(a) || (a < b ? 1 : -1))
+    .map((n) => path.join(ROOT, n));
 }
 
-function loadClient() {
-  const file = findClientFile();
-  if (!file) return null;
+function findClientFile() {
+  const own = ownClientFiles();
+  if (own.length) return own[0];
+  return fs.existsSync(SHARED_FILE) ? SHARED_FILE : null;
+}
+
+function readClientFile(file) {
+  const shared = file === SHARED_FILE;
   try {
     const raw = JSON.parse(fs.readFileSync(file, 'utf8').replace(/^﻿/, ''));
     // "installed" is a Desktop app client. "web" would also carry these
@@ -61,12 +76,89 @@ function loadClient() {
     // up front rather than failing mysteriously at Google's end.
     const c = raw.installed;
     if (!c || !c.client_id) {
-      return { error: raw.web ? 'That client is a "Web application". Create a "Desktop app" client instead.' : 'Not a Google OAuth client file.' };
+      return { error: raw.web ? 'That client is a "Web application". Create a "Desktop app" client instead.' : 'Not a Google OAuth client file.', file: path.basename(file), shared };
     }
-    return { clientId: c.client_id, clientSecret: c.client_secret || '', file: path.basename(file) };
+    return { clientId: c.client_id, clientSecret: c.client_secret || '', file: path.basename(file), shared };
   } catch (e) {
-    return { error: `Could not read ${path.basename(file)}: ${e.message}` };
+    return { error: `Could not read ${path.basename(file)}: ${e.message}`, file: path.basename(file), shared };
   }
+}
+
+/** The client new sign-ins use: your newest own client, or the shared one. */
+function loadClient() {
+  const file = findClientFile();
+  return file ? readClientFile(file) : null;
+}
+
+/** Every usable client: yours, newest first, then the shared one. */
+function allClients() {
+  const files = ownClientFiles();
+  if (fs.existsSync(SHARED_FILE)) files.push(SHARED_FILE);
+  return files.map(readClientFile).filter((c) => !c.error);
+}
+
+/** The client an account signed in with, when it is still here; otherwise the one new sign-ins use. */
+function clientFor(tokens) {
+  const id = tokens && tokens.client_id;
+  if (id) {
+    const hit = allClients().find((c) => c.clientId === id);
+    if (hit) return hit;
+  }
+  return loadClient();
+}
+
+function clientById(id) {
+  return id ? allClients().find((c) => c.clientId === id) || null : null;
+}
+
+/** "123456789012-abc.apps.googleusercontent.com" belongs to Cloud project number 123456789012. */
+function projectNumber(clientId) {
+  const m = /^(\d{6,})-/.exec(String(clientId || ''));
+  return m ? m[1] : null;
+}
+
+/**
+ * Saves a client file chosen on the Accounts page. Only the fields a Desktop
+ * client has are kept, under Google's own file name, so it is found the same
+ * way a file moved into the folder by hand is. Other clients stay: accounts
+ * they signed in keep working, and this one is used from now on.
+ */
+function saveClientFile(input) {
+  let raw = input;
+  if (typeof input === 'string') {
+    try { raw = JSON.parse(input.replace(/^﻿/, '')); } catch (_) {
+      throw new Error('That isn\'t the file Google gave you. It\'s a .json file with a name like client_secret_….json.');
+    }
+  }
+  if (raw && raw.web && !raw.installed) {
+    throw new Error('That client is a "Web application", which can\'t send the sign-in back to this computer. In Google Cloud, create another client with the type "Desktop app", and choose that file.');
+  }
+  const c = raw && raw.installed;
+  if (!c || typeof c.client_id !== 'string' || !/^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$/.test(c.client_id) || typeof c.client_secret !== 'string' || !c.client_secret) {
+    throw new Error('That isn\'t a Google sign-in client. In Google Cloud, open Clients, click your Desktop client, and use Download JSON.');
+  }
+  const keep = {};
+  for (const k of ['client_id', 'project_id', 'auth_uri', 'token_uri', 'auth_provider_x509_cert_url', 'client_secret']) {
+    if (typeof c[k] === 'string') keep[k] = c[k].slice(0, 300);
+  }
+  if (Array.isArray(c.redirect_uris)) keep.redirect_uris = c.redirect_uris.filter((u) => typeof u === 'string').slice(0, 5);
+  const before = loadClient();
+  const name = `client_secret_${c.client_id}.json`;
+  const file = path.join(ROOT, name);
+  const tmp = `${file}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify({ installed: keep }, null, 2));
+  fs.renameSync(tmp, file);
+  // A google-client.json you named would otherwise still win. It steps aside, kept, for the accounts it signed in.
+  const named = path.join(ROOT, 'google-client.json');
+  if (fs.existsSync(named) && readClientFile(named).clientId !== c.client_id) {
+    fs.renameSync(named, path.join(ROOT, `client_secret_previous-${Date.now()}.json`));
+  }
+  const now = new Date();
+  try { fs.utimesSync(file, now, now); } catch (_) {}
+  return {
+    file: name, clientId: c.client_id, projectNumber: projectNumber(c.client_id),
+    changed: !before || before.error || before.clientId !== c.client_id,
+  };
 }
 
 /* --------------------------------- tokens -------------------------------- */
@@ -122,7 +214,8 @@ function beginSignIn(client, redirectUri, role) {
 
   const state = b64url(crypto.randomBytes(24));
   const { verifier, challenge } = makePkce();
-  pending.set(state, { verifier, role, redirectUri, createdAt: Date.now() });
+  // The code Google sends back can only be swapped by the client that asked for it.
+  pending.set(state, { verifier, role, redirectUri, clientId: client.clientId, createdAt: Date.now() });
 
   const params = new URLSearchParams({
     client_id: client.clientId,
@@ -186,14 +279,17 @@ function explain(json, text) {
   const code = json && (json.error || '');
   const desc = json && (json.error_description || '');
   if (code === 'invalid_grant') {
-    return 'Google no longer accepts this sign-in. If your OAuth app is still in "Testing", Google expires ' +
-      'its refresh tokens after 7 days - publish it (see GOOGLE-SETUP.md) and reconnect.';
+    return 'Google no longer accepts this sign-in. If your app in Google Cloud is still in "Testing", Google expires ' +
+      'its sign-ins after 7 days: open Audience there, click Publish app, then reconnect (GOOGLE-SETUP.md has the details).';
   }
   if (code === 'admin_policy_enforced' || /admin/i.test(desc)) {
     return 'Your school\'s Google administrator blocks unapproved apps from reading this account.';
   }
   if (code === 'redirect_uri_mismatch') {
     return 'Google rejected the redirect address. The client must be a "Desktop app" type.';
+  }
+  if (code === 'invalid_client' || code === 'unauthorized_client') {
+    return 'Google doesn\'t recognise the sign-in client this account used. It may have been deleted in Google Cloud. Reconnect the account.';
   }
   return `${code || 'error'}${desc ? `: ${desc}` : ''}${!code && text ? `: ${String(text).slice(0, 200)}` : ''}`;
 }
@@ -217,6 +313,7 @@ async function exchangeCode(client, code, verifier, redirectUri) {
       refresh_token: res.json.refresh_token || null,
       expires_at: Date.now() + (res.json.expires_in || 3600) * 1000,
       scope: res.json.scope || '',
+      client_id: client.clientId,
     },
   };
 }
@@ -229,7 +326,7 @@ async function refresh(client, refreshToken) {
     grant_type: 'refresh_token',
   });
   if (res.status !== 200 || !res.json || !res.json.access_token) {
-    return { ok: false, error: explain(res.json, res.text), permanent: res.json && res.json.error === 'invalid_grant' };
+    return { ok: false, error: explain(res.json, res.text), permanent: !!res.json && ['invalid_grant', 'invalid_client', 'unauthorized_client'].includes(res.json.error) };
   }
   return {
     ok: true,
@@ -239,8 +336,8 @@ async function refresh(client, refreshToken) {
 }
 
 module.exports = {
-  SCOPES, TOKENS_FILE,
-  findClientFile, loadClient,
+  SCOPES, TOKENS_FILE, SHARED_FILE,
+  findClientFile, loadClient, allClients, clientFor, clientById, projectNumber, saveClientFile,
   loadTokens, setTokens, removeTokens,
   makePkce, beginSignIn, takePending,
   exchangeCode, refresh, explain,

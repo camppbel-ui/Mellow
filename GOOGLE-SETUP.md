@@ -1,134 +1,154 @@
 # Connecting your Google accounts
 
-Mellow reads your school and personal Gmail and Google Calendar. To do that,
-Google needs Mellow registered as an app. That registration is yours, lives in
-your own Google Cloud project, costs nothing, and takes about ten minutes. You do
-it once, and it covers both accounts.
+Mellow reads your school and personal Gmail and Google Calendar, so it can fill
+in your classes, deadlines, exams and emails waiting on a reply.
 
-**What Mellow gets:** read-only access to mail and calendars. It cannot send,
-delete, archive or label an email, and cannot change a calendar. Google's consent
-screen will list exactly those two read permissions and nothing else.
+**The easy way:** open Mellow, go to **Accounts**, and follow the checklist
+there. Every step has a button that opens the exact page in Google Cloud, and
+at the end you choose the file you downloaded. This page is the same steps, for
+reading ahead or if something goes wrong.
 
-**What stays on your PC:** the sign-ins, in `engine/google-tokens.json`. They are
-never sent anywhere except back to Google.
-
----
-
-## 1. Create the project
-
-Do this signed in as your **personal** account, `you@gmail.com`. School
-Google accounts are often not allowed to create Cloud projects.
-
-1. Go to **console.cloud.google.com**. Accept the terms if it asks.
-2. Click the project picker at the top, then **New project**.
-3. Name it `Mellow` and click **Create**. Make sure it is selected afterwards.
-
-## 2. Turn on the two APIs
-
-1. In the search bar at the top, type **Gmail API**, open it, click **Enable**.
-2. Search **Google Calendar API**, open it, click **Enable**.
-
-If you skip this, connecting works but syncing fails with a message telling you
-which API is off.
-
-## 3. Set up the sign-in screen
-
-Google has renamed this area a few times. Look for **Google Auth Platform**, or
-**OAuth consent screen** under APIs and Services.
-
-1. **Branding** (or App information): app name `Mellow`, and your personal email
-   for both support and developer contact. Save.
-2. **Audience** (or User type): choose **External**.
-3. Under **Test users**, click **Add users** and add **both**:
-   - `you@gmail.com`
-   - your school email address
-
-   An account that is not on this list gets "access denied" when it tries to
-   connect, which is the most common thing to trip over.
-
-You do not need to add scopes on this screen. Mellow asks for them itself when
-you connect.
-
-## 4. Create the client and download it
-
-1. Go to **Clients** (or **Credentials**, then **Create credentials**, then
-   **OAuth client ID**).
-2. Application type: **Desktop app**. Not "Web application", which cannot send
-   the sign-in back to your PC. Name it `Mellow desktop`.
-3. Click **Create**, then **Download JSON**.
-
-You get a file named something like
-`client_secret_1234-abcd.apps.googleusercontent.com.json`.
-
-4. Move that file into the `engine` folder inside your Mellow folder. The
-   Guide in Mellow shows the full path on your computer.
-
-   Do not rename it. Mellow finds it by name.
-
-That file is what lets Mellow ask Google for sign-ins. Keep it out of screenshots
-and anywhere public.
-
-## 5. Connect the accounts
-
-1. Open Mellow from the desktop icon and go to **Accounts**. The setup notice is
-   gone once the client file is found.
-2. Click **Connect school account**. Pick your school account in Google's chooser.
-3. Google shows **"Google hasn't verified this app."** That is expected: it is your
-   own app and nobody has reviewed it, including Google. Click **Advanced**, then
-   **Go to Mellow**.
-4. Tick both permissions and click **Continue**. You land back on Mellow with
-   "Connected".
-5. Click **Connect personal account** and repeat with your personal address.
-
-The first sync starts straight away. Homework and calendar entries appear within
-a minute.
+**What Mellow gets:** read-only access. It can't send, delete, archive or label
+an email, and can't change a calendar. Your sign-ins stay on your computer, in
+`engine/google-tokens.json`, and only ever go back to Google.
 
 ---
 
-## The 7-day catch, and how to avoid it
+## Why there are steps at all
 
-While the app's publishing status is **Testing**, Google expires its sign-ins
-after **7 days**. Mellow will mark the account "Needs reconnecting" rather than
-failing silently, and reconnecting takes ten seconds, but it is avoidable.
+Google makes every app that reads Gmail register its own sign-in. Mellow has no
+server and no company behind it, so you register it yourself, in your own free
+Google Cloud account. It takes about ten minutes, once, and covers all your
+Google accounts.
 
-Under **Audience**, click **Publish app** and confirm. Publishing does not make
-anything public. It only changes how long Google honours the sign-in. Because
-Mellow asks for Gmail access, Google keeps showing the "hasn't verified" screen
-when you connect, and that is fine for an app only you use.
+(If whoever gave you Mellow set up a shared sign-in, Accounts just shows
+**Connect** buttons and you can skip to step 7.)
 
-If Google will not let you publish without going through verification, leave it
-in Testing and reconnect once a week when Mellow asks.
+## The steps
+
+Do these on the computer running Mellow, signed in to Google with your
+**personal** account. School accounts often aren't allowed to make projects;
+your personal one works for your school account too.
+
+1. **Make a project.** Open
+   [console.cloud.google.com/projectcreate](https://console.cloud.google.com/projectcreate).
+   Name it `Mellow`, click **Create**. It's free: ignore anything about billing
+   or a free trial.
+
+2. **Turn on Gmail and Calendar.** Open
+   [this link](https://console.cloud.google.com/flows/enableapi?apiid=gmail.googleapis.com,calendar-json.googleapis.com).
+   Check the project picker at the top says **Mellow**, click **Next**, then
+   **Enable**. Both switch on at once.
+
+3. **Name the sign-in screen.** Open
+   [Branding](https://console.cloud.google.com/auth/branding) and click
+   **Get started**. App name `Mellow`, your email, **Next**. Audience
+   **External**, **Next**. Your email again, **Next**. Agree, **Create**.
+
+4. **Publish it.** Open [Audience](https://console.cloud.google.com/auth/audience),
+   click **Publish app**, then **Confirm**. This lets any of your Google accounts
+   connect without a test-user list, and stops Google signing you out every
+   week. Nothing becomes public.
+
+5. **Make a Desktop client.** Open [Clients](https://console.cloud.google.com/auth/clients),
+   click **Create client**. Application type **Desktop app** (not "Web
+   application"), any name, **Create**, then **Download JSON**. You get a file
+   named like `client_secret_1234-abcd.apps.googleusercontent.com.json`.
+
+6. **Give the file to Mellow.** On **Accounts**, click **Choose file** and pick
+   it from Downloads, or drag it anywhere onto Mellow. Mellow keeps it in its
+   engine folder and never puts it in Files.
+
+   *Using the plain zip, or an older Mellow?* Move the file into the `engine`
+   folder inside your Mellow folder instead (the Guide shows the exact path),
+   without renaming it, and reload.
+
+7. **Connect.** On Accounts, click **Connect school account**:
+   - Pick the account in Google's window.
+   - Google says **"Google hasn't verified this app."** That's expected for an
+     app you made yourself. Click **Advanced**, then **Go to Mellow**.
+   - Tick both boxes and click **Continue**. You land on "Connected".
+
+   Then **Connect personal account** the same way. The first sync starts
+   straight away; homework and calendar entries show up within a minute.
+
+Keep the downloaded file out of screenshots and anywhere public: it's what lets
+Mellow ask Google for sign-ins.
 
 ---
 
-## If your school blocks it
+## If something goes wrong
 
-Universities can stop unapproved apps reading school accounts. You will know,
-because connecting the school account ends with a message saying it is blocked by
-your administrator, or with "access denied" even though you added it as a test
-user.
-
-Nothing is broken on your end if that happens. Two ways around it, and Mellow
-supports both:
-
-**Forward school mail to your personal Gmail.** In school Gmail, Settings, then
-**Forwarding and POP/IMAP**, add your personal address. Some schools disable this
-too. If it works, go to Mellow's Accounts page and tick **Find homework** on the
-personal account, so assignments are picked up from the forwarded copies.
-
-**Subscribe to the school calendar as a feed.** In Google Calendar on a computer,
-open the school calendar's **Settings and sharing** and copy the **secret address
-in iCal format**. Paste it into `engine/calendars.json` under the `school` entry
-and set `disabled` to `false`. Calendar deadlines, exams included, are still
-picked up, just without email.
-
----
+- **"Access blocked" or "access denied" when connecting.** The app is probably
+  still in Testing. Do step 4 (Publish app) and connect again.
+- **"Needs reconnecting" every week.** Same cause: publish the app, then
+  **Reconnect** once.
+- **Sync says the Gmail API or Calendar API "has not been used" or is disabled.**
+  Accounts shows a **Turn on Gmail and Calendar** button for your project.
+  Click it, **Enable**, then **Sync now**.
+- **"That client is a Web application."** Make another client in step 5 with
+  the type **Desktop app**, and choose that file.
+- **Your school blocks it** ("blocked by your administrator"). Nothing is wrong
+  on your end. Two ways around it:
+  - **Forward school mail to your personal Gmail.** In school Gmail: Settings,
+    **Forwarding and POP/IMAP**, add your personal address. Then on Accounts,
+    turn on **Find homework** for the personal account.
+  - **Subscribe to the school calendar as a feed.** In Google Calendar on a
+    computer, open the school calendar's **Settings and sharing** and copy the
+    **secret address in iCal format**. Put it in `engine/calendars.json` under
+    the `school` entry and set `disabled` to `false`.
 
 ## Changing your mind
 
-- **Stop using one account:** Accounts, then **Disconnect**. Its saved sign-in is
-  deleted, and anything captured from it that you had not confirmed is forgotten.
-- **Revoke from Google's side:** myaccount.google.com/permissions, find Mellow,
-  **Remove access**. This works even if the PC is off.
-- **Delete everything:** remove the project in Cloud Console. Every sign-in it
-  ever issued stops working at once.
+- **Stop using one account:** Accounts, **Disconnect**. Its sign-in is deleted,
+  and anything captured from it that you hadn't confirmed is forgotten.
+- **Revoke from Google's side:** [myaccount.google.com/permissions](https://myaccount.google.com/permissions),
+  find Mellow, **Remove access**. Works even with the computer off.
+- **Delete everything:** delete the project in Google Cloud. Every sign-in it
+  issued stops working at once.
+
+---
+
+## Letting friends skip this (a shared sign-in)
+
+This part is for whoever publishes Mellow, not for someone setting it up.
+
+Mellow can come with one shared Desktop client, so friends only click
+**Connect**. If `engine/google-shared-client.json` exists, Accounts skips the
+checklist, and a friend's own client still wins if they add one. Each friend's
+sign-ins stay on their own computer: sharing the client doesn't share anyone's
+mail with you.
+
+1. Make a **separate** Google Cloud project for it, for example `Mellow
+   shared`. Don't reuse your personal project: the packager refuses a shared
+   client from the project your own sign-ins use.
+2. Do steps 2 to 5 above in that project, and publish it.
+3. Save the downloaded file as `engine/google-shared-client.json` in your
+   Mellow folder, then build a release with `install/prepare-release.ps1`.
+
+   Windows hides file extensions, so renaming can leave you with
+   `google-shared-client.json.json`, which nothing picks up. Check the name in
+   the folder, or run `dir engine\google-shared*` and make sure there is only
+   one `.json`. The engine log says `Google: client …` at startup, and the
+   packager prints "Including the shared Google client" when it finds it.
+
+The file goes into the release downloads, but it is left out of the GitHub
+repository (the repo's `.gitignore` skips `engine/*.json`). Google treats a
+Desktop app's client secret as not truly secret, but it is still public once
+it's in a download.
+
+What Google allows, as of September 2026:
+
+- **Up to 100 people.** Until the app passes Google's verification, the first
+  100 accounts that connect are all it will ever take, and each one sees the
+  "hasn't verified this app" screen.
+- **More than that needs verification.** Gmail read access is a *restricted*
+  scope. Google requires a verified app (home page, privacy policy, a demo
+  video) and, for apps that can reach the data through a server, an annual
+  third-party security assessment. Mellow runs on each person's computer, but
+  it sends some email content to Claude (billing emails, and anything the
+  assistant is asked to read), and Google may count that. Check the current
+  rules before going past 100:
+  [restricted scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification).
+- **School accounts** may still be blocked by their school, whichever client
+  is used.

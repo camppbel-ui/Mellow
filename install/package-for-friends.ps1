@@ -113,7 +113,10 @@ $include = @(
     'ratchet-client.js', 'mock-server.js', 'test-logic.js', 'ratchet.ico',
     'lib\blockset.js', 'lib\enforce.js', 'lib\notify.js', 'lib\util.js', 'lib\platform\windows.js', 'lib\platform\macos.js',
     'engine\engine.js', 'engine\dashboard.html', 'engine\favicon.png', 'engine\icon-180.png', 'engine\icon-192.png', 'engine\icon-512.png',
-    'engine\google.json', 'engine\calendars.json', 'engine\art\README.txt', 'engine\version.json'
+    'engine\google.json', 'engine\calendars.json', 'engine\art\README.txt', 'engine\version.json',
+    # A shared Google sign-in client, if you've made one for friends (GOOGLE-SETUP.md, "Letting friends skip this").
+    # Only this name ships: your own client_secret_*.json never does.
+    'engine\google-shared-client.json'
 )
 $includeDirs = @(
     @{ dir = 'engine\lib'; filter = '*.js' },
@@ -282,9 +285,19 @@ foreach ($f in $textFiles) {
             $leaks += "$rel contains '$shown'"
         }
     }
-    foreach ($p in $patterns) { if ($t -match $p) { $leaks += "$rel matches $p" } }
+    foreach ($p in $patterns) {
+        # The shared client is meant to carry a client secret; Google treats a Desktop app's secret as public.
+        if ($rel -eq 'engine\google-shared-client.json' -and $p -like 'GOCSPX*') { continue }
+        if ($t -match $p) { $leaks += "$rel matches $p" }
+    }
 }
-$forbidden = @('google-tokens.json', 'google-accounts.json', 'history.json', 'auto-tasks.json', 'finance.json', 'finance-brief.json', 'health.json',
+if (Test-Path (Join-Path $app 'engine\google-shared-client.json')) {
+    if ($leaks | Where-Object { $_ -like 'engine\google-shared-client.json contains*' }) {
+        $leaks += "engine\google-shared-client.json comes from your own Google Cloud project. Make the shared client in a separate project, so your own sign-ins stay yours."
+    }
+    Write-Host "Including the shared Google client, so friends can connect without making their own." -ForegroundColor Cyan
+}
+$forbidden = @('google-tokens.json', 'google-accounts.json', 'account.json', 'history.json', 'auto-tasks.json', 'finance.json', 'finance-brief.json', 'health.json', 'grades.json',
                'drops.json', 'ai-key.txt', 'ai-usage.json', 'news-detected.json', 'applied-state.json', 'stocks-cache.json')
 foreach ($name in $forbidden) {
     Get-ChildItem $app -File -Recurse -Filter $name | ForEach-Object { $leaks += "$($_.FullName.Substring($app.Length).TrimStart('\')) should not be in the package" }

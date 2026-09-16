@@ -17,6 +17,12 @@
  *   POST /api/finance/unpaid   take that back           { id, occurrence }
  *   POST /api/finance/ai       which parts of your finances Claude may read
  *
+ *   GET  /api/grades           courses, their grading, every score, and the GPA
+ *   POST /api/grades/course    add or change a course   { course }; /api/grades/course/delete { id }
+ *   POST /api/grades/grade     add or change a score    { course, grade }; /api/grades/grade/delete { course, id }
+ *   POST /api/grades/settings  term, default target, whether the assistant may see grades
+ *   POST /api/grades/from-file the grading breakdown a syllabus scan found   { id }
+ *
  *   GET  /api/ai/status        key present, model, this month's spend
  *   POST /api/ai/key           save or remove the Anthropic API key (PC only)
  *   POST /api/ai/settings      on/off, monthly limit, model
@@ -27,7 +33,16 @@
  *   POST /api/drops/move       put a file in another folder
  *   POST /api/drops/folder     make a folder; /api/drops/folder/delete removes one you made
  *   GET  /api/setup            what the in-app guide needs: addresses, folder, platform
+ *   GET  /api/account          is there a Mellow account, and who is signed in
+ *   POST /api/account/create   make it (PC only)   { email, name, password }
+ *   POST /api/account/signin   from any device     { email, password } -> a session token
+ *   POST /api/account/signout  this device, or { all: true }
+ *   POST /api/account/password { current, next } - signs every other device out
+ *   POST /api/account/profile  { name, email }
+ *   POST /api/account/device/revoke  { id }
  *   POST /api/profile          the name the greeting uses
+ *   POST /api/setup/phone      open Mellow to your phone and tablet, with a token   { open, kind? } (PC only)
+ *   POST /api/app/restart      start Mellow again, when an app or start file launched it (PC only)
  *   POST /api/assistant/send   a message to the assistant
  *   GET  /api/assistant?id=    a conversation, for polling
  *   POST /api/assistant/decide approve or decline the change it proposed
@@ -45,6 +60,7 @@
  *   POST /api/undo             take back a misclick, within five minutes
  *
  *   GET  /api/google/status    connected accounts and how their last sync went
+ *   POST /api/google/client    the client file you downloaded from Google Cloud, chosen on Accounts (PC only)
  *   POST /api/google/connect   start signing in a Google account
  *   GET  /oauth/callback       where Google sends the browser back to
  *   POST /api/google/sync      sync now rather than waiting for the timer
@@ -78,6 +94,8 @@ const news = require('./lib/news');
 const stocks = require('./lib/stocks');
 const finance = require('./lib/finance');
 const health = require('./lib/health');
+const grades = require('./lib/grades');
+const account = require('./lib/account');
 const versions = require('./lib/versions');
 const updates = require('./lib/updates');
 const drops = require('./lib/drops');
@@ -234,7 +252,7 @@ function currentState(cfg, now = new Date()) {
     tasks: detail,
     passes: { used, perWeek: cfg.passesPerWeek, remaining: Math.max(0, cfg.passesPerWeek - used) },
     stats: weekStats(tasks, history, now),
-    profile: { name: cfg.name || '' },
+    profile: { name: (() => { try { const a = account.load().account; return (a && a.name) || cfg.name || ''; } catch (_) { return cfg.name || ''; } })() },
     now: now.toISOString(),
   };
 }
@@ -419,7 +437,10 @@ function deadlinesBetween(tasks, history, from, to, now) {
  * on your calendar" instead of offering to add a class twice.
  */
 function existingForDrops(list) {
-  const out = { schedule: [], bills: [], transactions: [], subscriptions: [] };
+  const out = { schedule: [], bills: [], transactions: [], subscriptions: [], grades: [] };
+  try {
+    for (const c of grades.load().courses) for (const g of c.grades) out.grades.push({ course: c.code || c.name, title: g.title, score: g.score, outOf: g.outOf });
+  } catch (_) {}
   try {
     const fin = finance.load();
     out.bills = (fin.bills || []).map((b) => b.name).filter(Boolean);
@@ -635,20 +656,37 @@ function isLoopbackAddress(addr) {
 }
 
 /**
- * Writes need the token when one is configured - except from this machine.
+ * Who a request is allowed to be, except on this machine.
  *
  * Anything that can reach 127.0.0.1 is already running on this PC and could
- * read the token out of engine-config.json anyway, so asking the desktop app
- * for it buys no security and costs a password box. A phone coming in over
- * Tailscale arrives from a 100.x address and still has to prove itself.
+ * read the files straight off the disk anyway, so asking the desktop app to
+ * sign in buys no security and costs a password box. Every other device - a
+ * phone over Wi-Fi, an iPad over Tailscale - has to prove itself: with a
+ * session from your Mellow account, or with the engine token for a copy that
+ * has no account yet.
  */
-function writeAllowed(cfg, req, body) {
-  if (!cfg.token) return true;
-  if (isLoopbackAddress(req.socket && req.socket.remoteAddress)) return true;
-  const given = req.headers['x-ratchet-token'] || body.token || '';
+function isLocal(req) {
+  return isLoopbackAddress(req.socket && req.socket.remoteAddress);
+}
+
+function sessionOf(req) {
+  const given = req.headers['x-mellow-session'] || req.headers['x-ratchet-token'] || '';
+  try { return given ? account.verifySession(String(given)) : null; } catch (_) { return null; }
+}
+
+function tokenMatches(cfg, req, body) {
+  if (!cfg.token) return false;
+  const given = req.headers['x-ratchet-token'] || (body && body.token) || '';
   const a = Buffer.from(String(given));
   const b = Buffer.from(String(cfg.token));
   return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function writeAllowed(cfg, req, body) {
+  if (isLocal(req)) return true;
+  if (sessionOf(req)) return true;
+  if (account.exists()) return tokenMatches(cfg, req, body);
+  return !cfg.token || tokenMatches(cfg, req, body);
 }
 
 /**
@@ -663,6 +701,22 @@ function setupInfo(cfg, req) {
   if (!local) return base;
 
   const bindHosts = (Array.isArray(cfg.bindHost) ? cfg.bindHost : [cfg.bindHost]).filter(Boolean).map(String);
+  const { addresses: found, present } = localAddresses();
+  const addresses = found.map((a) => ({ ...a, open: bindHosts.includes(a.address) }));
+  // A bindHost the computer no longer has: Tailscale is off, or the router handed out a new address.
+  const missing = bindHosts.filter((h) => !isLoopback(h) && h !== '0.0.0.0' && !present.has(h));
+  return {
+    ...base, platform: process.platform, engineDir: __dirname, bindHosts, addresses, missing,
+    canRestart: updates.status().canRestart,
+    // Addresses saved from the Guide that the engine only starts listening on after a restart.
+    pendingBindHosts: pendingBindHosts,
+  };
+}
+
+let pendingBindHosts = null;
+
+/** This computer's home-network and Tailscale addresses, which a phone could reach it on. */
+function localAddresses() {
   const addresses = [];
   const present = new Set();
   const nets = require('os').networkInterfaces();
@@ -675,12 +729,67 @@ function setupInfo(cfg, req) {
       const kind = a === 100 && b >= 64 && b <= 127 ? 'tailscale'
         : a === 10 || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) ? 'lan' : null;
       if (!kind || n.address.startsWith('169.254.')) continue;
-      addresses.push({ address: n.address, kind, iface: name, open: bindHosts.includes(n.address) });
+      addresses.push({ address: n.address, kind, iface: name });
     }
   }
-  // A bindHost the computer no longer has: Tailscale is off, or the router handed out a new address.
-  const missing = bindHosts.filter((h) => !isLoopback(h) && h !== '0.0.0.0' && !present.has(h));
-  return { ...base, platform: process.platform, engineDir: __dirname, bindHosts, addresses, missing };
+  return { addresses, present };
+}
+
+/**
+ * Changes values in engine-config.json in place, so its notes and spacing
+ * survive; a key the file doesn't have yet is added the plain way.
+ */
+function setConfigValues(values) {
+  let text = '';
+  try { text = fs.readFileSync(store.CONFIG_FILE, 'utf8').replace(/^﻿/, ''); } catch (_) {}
+  let missing = false;
+  for (const [key, value] of Object.entries(values)) {
+    const pattern = new RegExp(`("${key}"\\s*:\\s*)("(?:[^"\\\\]|\\\\.)*"|\\[[^\\]]*\\]|true|false|-?\\d+(?:\\.\\d+)?)`);
+    if (text && pattern.test(text)) text = text.replace(pattern, (m, a) => a + JSON.stringify(value));
+    else missing = true;
+  }
+  if (!text || missing) {
+    store.writeJson(store.CONFIG_FILE, { ...store.readJson(store.CONFIG_FILE, {}), ...values });
+    return;
+  }
+  // Checked before it replaces the file: a config the engine can't read would stop it starting.
+  JSON.parse(text);
+  const tmp = `${store.CONFIG_FILE}.tmp`;
+  fs.writeFileSync(tmp, text);
+  fs.renameSync(tmp, store.CONFIG_FILE);
+}
+
+/** What a device is called in your list of signed-in devices, from what its browser says. */
+function deviceName(req) {
+  const ua = String((req.headers && req.headers['user-agent']) || '');
+  const what = /iPhone/.test(ua) ? 'iPhone' : /iPad/.test(ua) ? 'iPad' : /Android/.test(ua) ? 'Android phone'
+    : /Macintosh/.test(ua) ? 'Mac' : /Windows/.test(ua) ? 'Windows PC' : /Linux/.test(ua) ? 'Linux' : 'A device';
+  const browser = /EdgA?\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox'
+    : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : '';
+  return browser ? `${what}, ${browser}` : what;
+}
+
+/* Guessing a password over the network gets slower fast, per address. */
+const signInFails = new Map();
+function signInWait(req) {
+  const rec = signInFails.get(String((req.socket && req.socket.remoteAddress) || ''));
+  return rec && rec.until > Date.now() ? Math.ceil((rec.until - Date.now()) / 1000) : 0;
+}
+function signInDone(req, ok) {
+  const key = String((req.socket && req.socket.remoteAddress) || '');
+  if (ok) return signInFails.delete(key);
+  const rec = signInFails.get(key) || { n: 0, until: 0 };
+  rec.n++;
+  if (rec.n >= 5) rec.until = Date.now() + Math.min(15 * 60000, 15000 * 2 ** (rec.n - 5));
+  return signInFails.set(key, rec);
+}
+
+/** A password for other devices that's quick to type on a phone: twelve letters and digits, in threes. */
+function makeDeviceToken() {
+  const alphabet = 'abcdefghjkmnpqrstuvwxyz23456789';
+  const bytes = crypto.randomBytes(12);
+  const chars = [...bytes].map((b) => alphabet[b % alphabet.length]).join('');
+  return chars.match(/.{3}/g).join('-');
 }
 
 function redirectUri(cfg) {
@@ -696,7 +805,9 @@ function googleStatus(cfg) {
   const accounts = sync.loadAccounts();
 
   return {
-    client: client ? (client.error ? { ok: false, error: client.error } : { ok: true, file: client.file }) : { ok: false, error: null },
+    // No secret, only which kind of client and its project number, for the setup page's links into Google Cloud.
+    client: client ? (client.error ? { ok: false, error: client.error, shared: !!client.shared } : { ok: true, file: client.file, shared: !!client.shared, projectNumber: client.shared ? null : oauth.projectNumber(client.clientId) }) : { ok: false, error: null },
+    canUpload: true,
     redirectUri: redirectUri(cfg),
     syncing: sync.isRunning(),
     everyMinutes: sync.loadSettings().syncEveryMinutes,
@@ -751,7 +862,7 @@ async function handleCallback(req, res, cfg, url) {
   const err = url.searchParams.get('error');
   if (err) {
     const why = err === 'access_denied'
-      ? 'You declined, or your school does not allow this app to read the account. Nothing was connected.'
+      ? 'Nothing was connected. If you didn\'t press Cancel: your app in Google Cloud may still be in Testing. Open <b>Audience</b> there, click <b>Publish app</b>, and connect again. If this is a school account, your school may not allow it.'
       : escHtml(oauth.explain({ error: err }, ''));
     return sendHtml(res, 400, callbackPage('Not connected', why, false));
   }
@@ -763,7 +874,8 @@ async function handleCallback(req, res, cfg, url) {
       'Start again from the Accounts section. Sign-ins time out after fifteen minutes.', false));
   }
 
-  const client = oauth.loadClient();
+  // The client that started this sign-in, even if another has been added since.
+  const client = oauth.clientById(pending.clientId) || oauth.loadClient();
   if (!client || client.error) {
     return sendHtml(res, 500, callbackPage('Google client missing', 'The client file is not in the engine folder any more.', false));
   }
@@ -860,6 +972,18 @@ async function handle(req, res, cfg) {
     });
   }
 
+  /* Your Mellow account: what the sign-in screen needs, and the gate itself. */
+
+  if (route === '/api/account') {
+    return sendJson(res, 200, { ...account.status({ signedIn: !!sessionOf(req), onComputer: isLocal(req) }), tokenSet: !!cfg.token });
+  }
+
+  // Once there is an account, nothing about you is readable from another
+  // device until it signs in: not your mail, not your grades, not your money.
+  if (!isLocal(req) && account.exists() && !sessionOf(req) && !tokenMatches(cfg, req, null) && !route.startsWith('/api/account/')) {
+    return sendJson(res, 401, { error: 'Sign in to Mellow to see this.', signIn: true });
+  }
+
   if (route === '/api/setup') {
     return sendJson(res, 200, setupInfo(cfg, req));
   }
@@ -882,7 +1006,7 @@ async function handle(req, res, cfg) {
 
   /* things that stay private to this PC and devices with the token */
 
-  if (req.method === 'GET' && (route.startsWith('/api/ai/') || route.startsWith('/api/assistant') || route.startsWith('/api/drops') || route === '/api/health' || route === '/api/versions' || route === '/api/updates')) {
+  if (req.method === 'GET' && (route.startsWith('/api/ai/') || route.startsWith('/api/assistant') || route.startsWith('/api/drops') || route === '/api/health' || route === '/api/grades' || route === '/api/versions' || route === '/api/updates')) {
     // Conversations and dropped files are as private as the mail they came
     // from: another device needs the token even to read them.
     if (!writeAllowed(cfg, req, {})) return sendJson(res, 401, { error: 'bad or missing token' });
@@ -913,6 +1037,7 @@ async function handle(req, res, cfg) {
       return d ? sendJson(res, 200, d) : sendJson(res, 404, { error: 'That file is no longer there.' });
     }
     if (route === '/api/health') return sendJson(res, 200, health.getHealth());
+    if (route === '/api/grades') return sendJson(res, 200, grades.getGrades());
     if (route === '/api/updates') {
       // Answered from what was last checked; a stale check runs in the background.
       updates.check().catch(() => {});
@@ -980,8 +1105,64 @@ async function handle(req, res, cfg) {
     : route.startsWith('/api/assistant') || route === '/api/organize' ? 512 * 1024 : 64 * 1024);
   if (body._tooLarge) return sendJson(res, 413, { error: route === '/api/drops' ? 'That file is too big. The limit is 24 MB.' : route === '/api/health/import' ? 'That export is too big to import in one go.' : 'That is too long.' });
 
+  /* Making the account, signing in and out, the password, the devices. */
+
+  if (route.startsWith('/api/account/')) {
+    const what = route.slice('/api/account/'.length);
+    const mine = () => isLocal(req) || !!sessionOf(req);
+    try {
+      if (what === 'create') {
+        if (!isLocal(req)) return sendJson(res, 400, { error: 'Make your Mellow account on the computer running Mellow.' });
+        const made = account.create({ email: body.email, name: body.name, password: body.password, device: body.device || deviceName(req) });
+        // The greeting uses the account's name from here on.
+        try { setConfigValues({ name: made.account.name }); cfg.name = made.account.name; } catch (_) {}
+        log(`account created (${made.account.email})`);
+        return sendJson(res, 200, { ok: true, token: made.token, account: made.account, state: currentState(cfg) });
+      }
+      if (what === 'signin') {
+        const wait = signInWait(req);
+        if (wait) return sendJson(res, 429, { error: `Too many tries. Wait ${wait} seconds and try again.` });
+        try {
+          const now = account.signIn({ email: body.email, password: body.password, device: body.device || deviceName(req) });
+          signInDone(req, true);
+          log(`signed in: ${deviceName(req)}`);
+          return sendJson(res, 200, { ok: true, token: now.token, account: now.account });
+        } catch (e) {
+          signInDone(req, false);
+          return sendJson(res, 401, { error: e.message });
+        }
+      }
+      if (!mine()) return sendJson(res, 401, { error: 'Sign in to Mellow first.', signIn: true });
+      if (what === 'signout') {
+        const n = account.signOut(req.headers['x-mellow-session'] || '', { all: body.all === true });
+        return sendJson(res, 200, { ok: true, signedOut: n });
+      }
+      if (what === 'password') {
+        // On the computer itself the password can be set without the old one: whoever is there owns the files anyway.
+        const a = account.setPassword({
+          current: body.current, next: body.next, requireCurrent: !isLocal(req),
+          keepToken: req.headers['x-mellow-session'] || '',
+        });
+        log('account password changed; other devices signed out');
+        return sendJson(res, 200, { ok: true, account: a });
+      }
+      if (what === 'profile') {
+        const a = account.setProfile({ name: body.name, email: body.email });
+        if (body.name !== undefined) { try { setConfigValues({ name: a.name }); cfg.name = a.name; } catch (_) {} }
+        return sendJson(res, 200, { ok: true, account: a, state: currentState(cfg) });
+      }
+      if (what === 'device/revoke') {
+        account.revoke(String(body.id || ''));
+        return sendJson(res, 200, { ok: true, account: account.publicAccount() });
+      }
+      return sendJson(res, 404, { error: 'not found' });
+    } catch (e) {
+      return sendJson(res, 400, { error: e.message });
+    }
+  }
+
   if (!writeAllowed(cfg, req, body)) {
-    return sendJson(res, 401, { error: 'bad or missing token' });
+    return sendJson(res, 401, { error: account.exists() ? 'Sign in to Mellow first.' : 'bad or missing token', signIn: account.exists() });
   }
 
   const loopback = isLoopbackAddress(req.socket && req.socket.remoteAddress);
@@ -1002,6 +1183,8 @@ async function handle(req, res, cfg) {
       store.writeJson(store.CONFIG_FILE, { ...store.readJson(store.CONFIG_FILE, {}), name });
     }
     cfg.name = name;
+    // The account keeps the same name, so the greeting and the account never disagree.
+    try { if (account.exists()) account.setProfile({ name }); } catch (_) {}
     log(`profile name ${name ? 'set' : 'cleared'}`);
     return sendJson(res, 200, { ok: true, state: currentState(cfg) });
   }
@@ -1040,7 +1223,7 @@ async function handle(req, res, cfg) {
   if (route === '/api/drops/apply') {
     try {
       const r = drops.apply(String(body.id || ''), Array.isArray(body.choices) ? body.choices : [], { counts: body.counts === true });
-      log(`drop ${body.id}: added ${r.added.events} events, ${r.added.deadlines} deadlines, ${r.added.finance} finance`);
+      log(`drop ${body.id}: added ${r.added.events} events, ${r.added.deadlines} deadlines, ${r.added.finance} finance, ${r.added.grades || 0} grades`);
       return sendJson(res, 200, { ok: true, ...r, drop: drops.getDrop(String(body.id)), state: currentState(cfg) });
     } catch (e) {
       return sendJson(res, 400, { error: e.message });
@@ -1146,6 +1329,18 @@ async function handle(req, res, cfg) {
   }
 
   /* google accounts */
+
+  if (route === '/api/google/client') {
+    // A sign-in client is as sensitive as the AI key: only chosen on this PC.
+    if (!loopback) return sendJson(res, 400, { error: 'Add the Google client file from the PC running Mellow.' });
+    try {
+      const saved = oauth.saveClientFile(body.json);
+      log(`google: client ${saved.changed ? 'added' : 'chosen again'} (project ${saved.projectNumber || '?'})`);
+      return sendJson(res, 200, { ok: true, changed: saved.changed, projectNumber: saved.projectNumber, status: googleStatus(cfg) });
+    } catch (e) {
+      return sendJson(res, 400, { error: e.message });
+    }
+  }
 
   if (route === '/api/google/connect') {
     if (!isLoopbackAddress(req.socket && req.socket.remoteAddress)) {
@@ -1322,6 +1517,47 @@ async function handle(req, res, cfg) {
     }
   }
 
+  /* grades */
+
+  if (route.startsWith('/api/grades/')) {
+    const what = route.slice('/api/grades/'.length);
+    try {
+      let note, extra = {};
+      if (what === 'course') {
+        const c = grades.change((data) => grades.upsertCourse(data, body.course));
+        note = `${body.course && body.course.id ? 'changed' : 'added'} course ${c.id}`;
+        extra.id = c.id;
+      } else if (what === 'course/delete') {
+        grades.change((data) => grades.removeCourse(data, String(body.id || '')));
+        note = `deleted course ${body.id}`;
+      } else if (what === 'grade') {
+        const r = grades.change((data) => grades.upsertGrade(data, String(body.course || ''), body.grade));
+        note = `${body.grade && body.grade.id ? 'changed' : 'added'} grade ${r.grade.id} in ${r.course.id}`;
+        extra.id = r.grade.id;
+      } else if (what === 'grade/delete') {
+        grades.change((data) => grades.removeGrade(data, String(body.course || ''), String(body.id || '')));
+        note = `deleted grade ${body.id}`;
+      } else if (what === 'settings') {
+        grades.change((data) => grades.setSettings(data, body.settings));
+        note = 'settings changed';
+      } else if (what === 'from-file') {
+        const d = drops.getDrop(String(body.id || ''));
+        if (!d) throw new Error('That file is no longer there.');
+        const r = grades.change((data) => grades.applyGrading(data, d.grading, { type: 'file', ref: d.id, name: d.name }));
+        drops.markGradingAdded(d.id, r.course.id);
+        note = `grading from drop ${d.id} ${r.created ? 'made' : 'updated'} course ${r.course.id}`;
+        extra = { id: r.course.id, created: r.created, drop: drops.getDrop(d.id) };
+      } else {
+        return sendJson(res, 404, { error: 'not found' });
+      }
+      // Ids only. Scores stay out of the log.
+      log(`grades: ${note}`);
+      return sendJson(res, 200, { ok: true, ...extra, grades: grades.getGrades() });
+    } catch (e) {
+      return sendJson(res, 400, { error: e.message });
+    }
+  }
+
   /* versions of the app */
 
   if (route.startsWith('/api/versions/')) {
@@ -1366,6 +1602,51 @@ async function handle(req, res, cfg) {
       log(`update failed: ${e.message}`);
       return sendJson(res, 400, { error: e.message });
     }
+  }
+
+  /* Opening Mellow to your phone and tablet from the Guide, instead of editing engine-config.json by hand. */
+
+  if (route === '/api/setup/phone') {
+    if (!loopback) return sendJson(res, 400, { error: 'Change this from the computer running Mellow.' });
+    const site = req.headers['sec-fetch-site'];
+    if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'not from Mellow' });
+    const open = body.open !== false;
+    try {
+      if (!open) {
+        setConfigValues({ bindHost: '127.0.0.1' });
+        pendingBindHosts = ['127.0.0.1'];
+        log('setup: closed to other devices (after restart)');
+        return sendJson(res, 200, { ok: true, open: false, setup: setupInfo(cfg, req) });
+      }
+      const { addresses } = localAddresses();
+      const pick = addresses.filter((a) => !body.kind || a.kind === body.kind).map((a) => a.address);
+      if (!pick.length) {
+        return sendJson(res, 400, { error: body.kind === 'tailscale'
+          ? 'Tailscale isn\'t on on this computer. Install it from tailscale.com, sign in, then try again.'
+          : 'This computer isn\'t on a home Wi-Fi network or Tailscale right now. Connect to Wi-Fi, or install Tailscale, then try again.' });
+      }
+      // Never open without a token: anyone else on the same Wi-Fi could otherwise change things.
+      const token = cfg.token || makeDeviceToken();
+      setConfigValues({ bindHost: pick.length === 1 ? pick[0] : pick, token });
+      cfg.token = token;
+      pendingBindHosts = pick;
+      log(`setup: opened to other devices on ${pick.length} address(es) (after restart)`);
+      return sendJson(res, 200, { ok: true, open: true, token, addresses: pick, setup: setupInfo(cfg, req) });
+    } catch (e) {
+      return sendJson(res, 400, { error: `Couldn't save engine-config.json: ${e.message}` });
+    }
+  }
+
+  // Started by the Windows or Mac app, or a start file: exiting with this code starts Mellow again.
+  if (route === '/api/app/restart') {
+    if (!loopback) return sendJson(res, 400, { error: 'Restart Mellow from the computer running it.' });
+    const site = req.headers['sec-fetch-site'];
+    if (site && site !== 'same-origin' && site !== 'none') return sendJson(res, 403, { error: 'not from Mellow' });
+    if (!updates.status().canRestart) return sendJson(res, 400, { error: 'Close Mellow and open it again to restart it.' });
+    log('restart from the dashboard');
+    sendJson(res, 200, { ok: true });
+    setTimeout(() => process.exit(updates.RESTART_CODE), 400);
+    return undefined;
   }
 
   // The downloaded Windows or Mac app has no window of its own to close, so Mellow is quit from here.
@@ -1527,11 +1808,13 @@ async function main() {
   log(`${store.loadTasks().length} manual task(s). Passes: ${cfg.passesPerWeek}/week.`);
 
   if (extra.length > 0) {
-    if (cfg.token) {
+    if (account.exists()) {
+      log(`Reachable from ${extra.join(', ')}. Other devices sign in with your Mellow account.`);
+    } else if (cfg.token) {
       log(`Reachable from ${extra.join(', ')}. Writes from other devices need the token.`);
     } else {
-      log('WARNING: the port is open beyond this machine and no token is set. ' +
-          'Anyone who can reach it can mark your tasks done.');
+      log('WARNING: the port is open beyond this machine, with no Mellow account and no token. ' +
+          'Anyone who can reach it can read your day and mark tasks done. Make an account on the Accounts page.');
     }
   }
 

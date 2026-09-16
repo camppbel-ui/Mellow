@@ -151,7 +151,8 @@ function status() {
 
 /* Settings and data that are already here are kept; a release only adds ones that are missing. */
 function keepExisting(rel) {
-  return /\.json$/i.test(rel) && rel !== 'engine/version.json';
+  // The shared Google client comes with Mellow, like its code, so a release can replace it.
+  return /\.json$/i.test(rel) && rel !== 'engine/version.json' && rel !== 'engine/google-shared-client.json';
 }
 
 // Never written by an update, whatever a zip contains.

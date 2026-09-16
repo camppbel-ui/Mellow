@@ -61,13 +61,13 @@ class Account {
   }
 
   async accessToken(force = false) {
-    const client = oauth.loadClient();
-    if (!client || client.error) throw new ApiError('Google client is not configured', 0, true);
-
     const t = oauth.loadTokens()[this.email];
     if (!t || !t.refresh_token) {
       throw new ApiError('Not connected. Reconnect this account.', 401, true);
     }
+    // The client that issued this sign-in, which may not be the newest one.
+    const client = oauth.clientFor(t);
+    if (!client || client.error) throw new ApiError('Google client is not configured', 0, true);
     // Refresh a minute early, so a token never expires between the check
     // and the request that uses it.
     if (!force && t.access_token && t.expires_at && t.expires_at - Date.now() > 60000) {
@@ -76,7 +76,8 @@ class Account {
 
     const r = await oauth.refresh(client, t.refresh_token);
     if (!r.ok) throw new ApiError(r.error, 401, !!r.permanent);
-    oauth.setTokens(this.email, { access_token: r.access_token, expires_at: r.expires_at });
+    // Sign-ins from before clients were remembered learn theirs the first time it works.
+    oauth.setTokens(this.email, { access_token: r.access_token, expires_at: r.expires_at, ...(t.client_id ? {} : { client_id: client.clientId }) });
     return r.access_token;
   }
 
@@ -94,7 +95,7 @@ class Account {
       // 403 from Gmail or Calendar almost always means the API is not enabled
       // in the Cloud project, which is a setup step, not a transient failure.
       const hint = res.status === 403 && /has not been used|is disabled|not enabled/i.test(msg)
-        ? ' Enable the Gmail API and Google Calendar API in your Cloud project.' : '';
+        ? ' Turn on the Gmail API and Google Calendar API for your Google Cloud project: Accounts has a button for it.' : '';
       throw new ApiError(`Google API ${res.status}: ${msg}${hint}`, res.status, res.status === 403 && !!hint);
     }
     return res.json;

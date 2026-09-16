@@ -2,7 +2,8 @@
 /**
  * drops.js - files dropped onto the dashboard, read, and turned into things
  * you can add: classes and events, deadlines and exams, to-dos, bills,
- * paydays, transactions and credit cards.
+ * paydays, transactions and credit cards, scores for Grades, and a syllabus's
+ * grading breakdown.
  *
  * Nothing found in a file is added by itself. A scan produces a list; you tick
  * what is right and press Add. Deadlines added that way arrive unconfirmed
@@ -26,6 +27,7 @@ const ics = require('./ics');
 const zip = require('./zip');
 const autotasks = require('./autotasks');
 const finance = require('./finance');
+const grades = require('./grades');
 const claude = require('./ai/claude');
 const privacy = require('./ai/privacy');
 const dedupe = require('./dedupe');
@@ -57,7 +59,7 @@ const TYPES = {
   '.rtf': { mime: 'application/rtf', how: 'rtf' },
 };
 
-const KINDS = ['event', 'class', 'deadline', 'exam', 'task', 'bill', 'payday', 'transaction', 'credit_card', 'subscription'];
+const KINDS = ['event', 'class', 'deadline', 'exam', 'task', 'bill', 'payday', 'transaction', 'credit_card', 'subscription', 'grade'];
 // Holdings only come from exports read on this PC, so Claude is never asked for them.
 const FINANCE_KINDS = new Set(['bill', 'payday', 'transaction', 'credit_card', 'holding', 'subscription']);
 const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -195,6 +197,13 @@ function intake({ name, data, section }, log = () => {}) {
   const buf = Buffer.from(String(data || ''), 'base64');
   if (!buf.length) throw new Error('That file was empty.');
   if (buf.length > MAX_BYTES) throw new Error('That file is over 24 MB, which is more than Claude can read in one go.');
+  // A Google sign-in client would be sent to Claude if it were read here, secret and all.
+  if (type.how === 'text' && buf.length < 64 * 1024) {
+    const text = buf.toString('utf8');
+    if (/"(installed|web)"\s*:/.test(text) && /client_secret|GOCSPX-/.test(text)) {
+      throw new Error('That\'s your Google sign-in client file. Choose it on the Accounts page instead: it never goes in Files.');
+    }
+  }
 
   const drop = {
     id: crypto.randomBytes(8).toString('hex'),
@@ -202,7 +211,7 @@ function intake({ name, data, section }, log = () => {}) {
     ext,
     mime: type.mime,
     size: buf.length,
-    section: ['today', 'tasks', 'news', 'finance', 'files', 'sleep', 'accounts', 'assistant', 'guide'].includes(section) ? section : 'today',
+    section: ['today', 'focus', 'tasks', 'grades', 'news', 'finance', 'health', 'files', 'sleep', 'accounts', 'assistant', 'guide'].includes(section) ? section : 'today',
     uploadedAt: new Date().toISOString(),
     status: 'scanning',
     items: [],
@@ -231,6 +240,7 @@ function item(fields) {
     id: crypto.randomBytes(4).toString('hex'),
     kind: 'event', title: '', course: null, date: null, startTime: null, endTime: null, location: null,
     amount: null, repeats: 'none', weekdays: [], until: null, notes: null, evidence: null, confidence: 'high', card: null,
+    outOf: null, category: null,
     added: false,
     ...fields,
   };
@@ -533,19 +543,43 @@ function schemaFor(folders) {
   return {
   type: 'object',
   additionalProperties: false,
-  required: ['title', 'folder', 'summary', 'highlights', 'documentKind', 'items'],
+  required: ['title', 'folder', 'summary', 'highlights', 'documentKind', 'grading', 'items'],
   properties: {
     title: { type: 'string' },
     folder: { type: 'string', enum: folders },
     summary: { type: 'string' },
     highlights: { type: 'array', items: { type: 'string' } },
-    documentKind: { type: 'string', enum: ['syllabus', 'class_schedule', 'assignment', 'flyer', 'email', 'bill', 'statement', 'receipt', 'pay_stub', 'notes', 'work', 'other'] },
+    documentKind: { type: 'string', enum: ['syllabus', 'class_schedule', 'assignment', 'grades', 'flyer', 'email', 'bill', 'statement', 'receipt', 'pay_stub', 'notes', 'work', 'other'] },
+    grading: {
+      anyOf: [{
+        type: 'object',
+        additionalProperties: false,
+        required: ['course', 'courseName', 'instructor', 'credits', 'categories', 'scale'],
+        properties: {
+          course: nullable('string'),
+          courseName: nullable('string'),
+          instructor: nullable('string'),
+          credits: nullable('number'),
+          categories: {
+            type: 'array',
+            items: {
+              type: 'object', additionalProperties: false, required: ['name', 'weight', 'count', 'drop'],
+              properties: { name: { type: 'string' }, weight: { type: 'number' }, count: nullable('integer'), drop: nullable('integer') },
+            },
+          },
+          scale: {
+            type: 'array',
+            items: { type: 'object', additionalProperties: false, required: ['letter', 'min'], properties: { letter: { type: 'string' }, min: { type: 'number' } } },
+          },
+        },
+      }, { type: 'null' }],
+    },
     items: {
       type: 'array',
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['kind', 'title', 'course', 'date', 'startTime', 'endTime', 'location', 'amount', 'repeats', 'weekdays', 'until', 'notes', 'evidence', 'confidence', 'card'],
+        required: ['kind', 'title', 'course', 'date', 'startTime', 'endTime', 'location', 'amount', 'outOf', 'category', 'repeats', 'weekdays', 'until', 'notes', 'evidence', 'confidence', 'card'],
         properties: {
           kind: { type: 'string', enum: KINDS },
           title: { type: 'string' },
@@ -555,6 +589,8 @@ function schemaFor(folders) {
           endTime: nullable('string'),
           location: nullable('string'),
           amount: nullable('number'),
+          outOf: nullable('number'),
+          category: nullable('string'),
           repeats: { type: 'string', enum: ['none', 'weekly', 'biweekly', 'monthly', 'yearly'] },
           weekdays: { type: 'array', items: { type: 'string', enum: WEEKDAYS } },
           until: nullable('string'),
@@ -599,6 +635,13 @@ Kinds:
 - transaction: a single purchase or payment that already happened.
 - credit_card: a credit card's details from a statement; put the statement balance in amount and the rest in card.
 - subscription: a service that charges again and again (streaming, music, apps, storage, memberships), e.g. from a receipt or a screenshot of the App Store, Google Play or PayPal subscriptions list. title is the service ("Spotify"), notes the plan if named, amount the price per period, repeats its period (monthly, yearly), date the next charge or renewal date. Rent, utilities and phone bills are bills, not subscriptions.
+- grade: a score the student already got back, e.g. from a screenshot of Canvas, Blackboard or Moodle grades, or a returned test or paper. title is the assignment, course its course code, amount the points earned, outOf the points possible (100 when only a percentage is shown), category the grade group the page puts it in ("Exams", "Homework"), date when it was due or graded. Leave out anything not graded yet.
+
+Grading (the grading field):
+- Fill it when the document says how a course is graded, usually a syllabus: course is the course code, courseName the course's name, instructor the professor's name, credits the credit hours if stated.
+- categories are the weighted parts of the grade, as the syllabus names them, with weight as a percentage of the final grade (so they add up to about 100), count how many graded items that part has when the syllabus says or lists them (3 exams, 10 problem sets), and drop the number of lowest scores dropped in that part, when it says so. If the syllabus gives points instead of percentages, convert each part to its share of the total points.
+- scale is the letter cut-offs when the syllabus lists them ("A 94-100, A- 90-93" gives A 94, A- 90), as the lowest percentage for each letter. Empty when it doesn't say.
+- null when the document does not describe grading.
 
 Rules:
 - Dates are YYYY-MM-DD and times HH:MM on a 24-hour clock, in the student's local time. Resolve relative dates ("next Friday", "Week 3 Tuesday") against the document's own dates and today's date. If a year is missing, pick the one that makes the date upcoming or in the current term.
@@ -642,7 +685,30 @@ async function aiRead(drop, content, allowFinance) {
     highlights: (Array.isArray(parsed.highlights) ? parsed.highlights : []).map((h) => privacy.redact(String(h)).slice(0, 200)).filter(Boolean).slice(0, 6),
     summary: String(parsed.summary || ''),
     documentKind: parsed.documentKind || 'other',
+    grading: cleanGrading(parsed.grading),
     items: (parsed.items || []).slice(0, 400).map((x) => item({ ...x, weekdays: Array.isArray(x.weekdays) ? x.weekdays : [] })),
+  };
+}
+
+/** A grading breakdown worth offering: at least one weighted part, weights that are percentages. */
+function cleanGrading(g) {
+  if (!g || typeof g !== 'object' || !Array.isArray(g.categories)) return null;
+  const str = (v, n) => (v == null ? null : String(v).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n) || null);
+  const categories = g.categories
+    .map((k) => ({
+      name: str(k && k.name, 60), weight: Number(k && k.weight),
+      count: k && Number.isInteger(k.count) && k.count > 0 ? Math.min(100, k.count) : null,
+      drop: k && Number.isInteger(k.drop) && k.drop > 0 ? Math.min(20, k.drop) : null,
+    }))
+    .filter((k) => k.name && Number.isFinite(k.weight) && k.weight >= 0 && k.weight <= 100)
+    .slice(0, 20);
+  if (!categories.length || !categories.some((k) => k.weight > 0)) return null;
+  return {
+    course: str(g.course, 24), courseName: str(g.courseName, 90), instructor: str(g.instructor, 80),
+    credits: Number.isFinite(Number(g.credits)) && g.credits > 0 && g.credits <= 12 ? Number(g.credits) : null,
+    categories,
+    scale: grades.cleanScale(g.scale) || [],
+    total: Math.round(categories.reduce((s, k) => s + k.weight, 0) * 10) / 10,
   };
 }
 
@@ -709,7 +775,15 @@ async function scan(id, log = () => {}) {
     folder: d.folderBy === 'you' ? d.folder : result.folder || 'other', folderBy: d.folderBy === 'you' ? 'you' : result.method === 'local' ? 'auto' : 'ai',
     documentKind: result.documentKind, items: result.items, usd: result.usd || 0, error: null,
     account: result.account || null, holdings: result.holdings || null,
+    // A rescan that finds the same course's breakdown keeps saying it was added.
+    grading: result.grading || null,
+    gradingAdded: result.grading && d.gradingAdded ? d.gradingAdded : null,
   }));
+}
+
+/** Remembers that a file's grading breakdown went into Grades, and which course it made or updated. */
+function markGradingAdded(id, courseId) {
+  return publicDrop(updateDrop(id, { gradingAdded: courseId }));
 }
 
 /* ------------------------ already on your calendar? ----------------------- */
@@ -740,6 +814,10 @@ function markExisting(drop, existing) {
       if (x.kind === 'subscription') match = ((existing && existing.subscriptions) || []).find((name) => sameThing(name, x.title)) || null;
       if (x.kind === 'transaction' && txns.has(txnSignature(x.date, x.amount, x.title))) match = x.title;
       return match ? { ...x, existing: 'finance', existingTitle: match } : x;
+    }
+    if (x.kind === 'grade') {
+      const g = ((existing && existing.grades) || []).find((e) => grades.sameCourse(e.course, x.course) && sameThing(e.title, x.title));
+      return g ? { ...x, existing: 'grades', existingTitle: `${g.title}: ${g.score}/${g.outOf}` } : x;
     }
     const titles = [x.title, x.course ? `${x.course} ${x.title}` : null].filter(Boolean);
     const at = /^(\d{1,2}):(\d{2})$/.exec(String(x.startTime || ''));
@@ -837,22 +915,29 @@ function apply(dropId, choices, { counts = false } = {}) {
   const fin = finance.load();
   const now = new Date();
   const source = { type: 'file', name: drop.name, ref: drop.id, at: now.toISOString(), subject: drop.name, from: drop.name };
-  const added = { events: 0, deadlines: 0, finance: 0 };
+  const added = { events: 0, deadlines: 0, finance: 0, grades: 0 };
   const errors = [];
   let finChanged = false;
   // Transactions and holdings are added together at the end, so duplicates
-  // are caught across the whole file and accounts are found once.
-  const batch = { transaction: [], holding: [] };
+  // are caught across the whole file and accounts are found once. Scores too,
+  // so a screenshot of a whole grades page is one save.
+  const batch = { transaction: [], holding: [], grade: [] };
 
   const items = drop.items.map((orig, index) => {
     if (!wanted.has(orig.id) || orig.added) return orig;
     const patch = wanted.get(orig.id);
     const x = { ...orig };
-    for (const k of ['title', 'date', 'startTime', 'endTime', 'location', 'course', 'amount', 'kind']) {
+    for (const k of ['title', 'date', 'startTime', 'endTime', 'location', 'course', 'amount', 'outOf', 'kind']) {
       if (patch[k] !== undefined) x[k] = patch[k] === '' ? null : patch[k];
     }
     if (x.amount != null) x.amount = Number(x.amount);
     try {
+      if (x.kind === 'grade') {
+        if (!x.course) throw new Error('it has no course');
+        if (x.amount == null || !Number.isFinite(x.amount)) throw new Error('it has no score');
+        batch.grade.push({ index, orig, x });
+        return orig;
+      }
       if (x.kind === 'event' || x.kind === 'class') {
         const list = meetings(x);
         if (!list.length) throw new Error('it has no date');
@@ -953,6 +1038,30 @@ function apply(dropId, choices, { counts = false } = {}) {
   if (finChanged && !batch.transaction.length) {
     try { finance.detectAccounts(fin); } catch (_) {}
   }
+  if (batch.grade.length) {
+    const made = new Set();
+    grades.change((data) => {
+      for (const { index, x } of batch.grade) {
+        try {
+          // A course seen for the first time on a grades page is added along with its scores.
+          if (!grades.findCourse(data, x.course)) {
+            // Filed under the course, not its section: "GOV 113-2" becomes GOV 113.
+            const keys = grades.courseKeys(x.course);
+            const m = /^\s*([A-Z]{2,5})(?:\s*\/\s*[A-Z]{2,5})*\s*-?\s*(\d{2,4}[A-Z]?)/i.exec(String(x.course));
+            grades.upsertCourse(data, { code: m ? `${m[1]} ${m[2]}` : x.course, target: data.settings.defaultTarget, source: { type: 'file', ref: drop.id, name: drop.name } });
+            made.add(grades.codeKey(keys[0] || x.course));
+          }
+          const r = grades.upsertGrade(data, x.course, {
+            title: x.title, score: x.amount, outOf: x.outOf, categoryName: x.category || '', date: x.date || '', source: 'file',
+          });
+          items[index] = { ...x, added: true, addedAs: `a grade in ${r.course.code || r.course.name}${made.has(grades.codeKey(grades.courseKeys(x.course)[0] || x.course)) ? ' (new course)' : ''}` };
+          added.grades++;
+        } catch (e) {
+          errors.push(`${x.title || 'A grade'}: ${e.message}`);
+        }
+      }
+    });
+  }
 
   autotasks.save(state);
   if (finChanged) finance.save(fin);
@@ -989,7 +1098,7 @@ function list() {
 }
 
 module.exports = {
-  intake, scan, apply, dismiss, list, getDrop: (id) => publicDrop(getDrop(id)), contentFor,
+  intake, scan, apply, dismiss, list, getDrop: (id) => publicDrop(getDrop(id)), contentFor, markGradingAdded, cleanGrading,
   allFolders: () => allFolders(), createFolder, deleteFolder, moveDrop, markExisting, sameThing, itemSpan, rawFile,
   fromCsv, fromOfx, fromIcs, meetings, csvRow, parseMoney, parseAnyDate, htmlText, decodeEntities, txnSignature,
   TYPES, SCHEMA, schemaFor, DEFAULT_FOLDERS, MAX_BYTES, DIR, INDEX,

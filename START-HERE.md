@@ -30,16 +30,23 @@ Your browser opens **http://localhost:7777/**. That's Mellow. Leave the window
 that opened running while you use it; closing it stops Mellow.
 
 **Then open the Guide** (the last section, or press `9`). It checks what you've
-set up, lets you add your name, and walks you through everything below with
-exact steps for your computer, your iPhone, iPad or Android phone.
+set up and walks you through everything below with a button for each step, on
+your computer and your iPhone, iPad or Android phone. The first thing it asks
+for is a **Mellow account**: an email and a password of your own, kept on this
+computer. Everything you add belongs to it, and it's how your phone signs in.
+It isn't a Google account, and there's no Mellow server behind it.
+Stuck? Ask in the [Mellow Discord](https://discord.gg/j8xJXhXFe5).
 
-## 2. Connect your Google accounts (optional, 20 minutes, once)
+## 2. Connect your Google accounts (optional, about 10 minutes, once)
 
 This is what fills in your classes, deadlines and emails waiting on a reply.
-Google makes every app that reads Gmail get its own sign-in client, so you
-make your own (it's free): follow **`GOOGLE-SETUP.md`**, then press Connect on
-the Accounts page. Mellow can read your mail and calendar; it can't send,
-delete or change anything.
+Open **Accounts** in Mellow and follow the checklist: each step has a button
+that opens the right page in Google Cloud, and at the end you choose the file
+you downloaded and press **Connect**. Google makes every app that reads Gmail
+register its own sign-in, which is why there are steps; it's free.
+`GOOGLE-SETUP.md` has the same steps written out, and what to do if your school
+blocks it. Mellow can read your mail and calendar; it can't send, delete or
+change anything.
 
 ## 3. Turn on the AI (optional)
 
@@ -94,9 +101,9 @@ administrator PowerShell and is deliberately hard to switch off again.
   administrator PowerShell runs Mellow at boot. Only do this if you want the
   blocking part; otherwise `start-ratchet.cmd` is all you need.
 - **On your phone or tablet:** the computer runs Mellow and the phone opens it.
-  Put your computer's Wi-Fi address (or its [Tailscale](https://tailscale.com)
-  address, to reach it away from home) in `bindHost` in `engine-config.json`,
-  **and set a `token`** in the same file. Then open `http://<that address>:7777/`
-  on the phone and Add to Home Screen. The Guide shows your computer's exact
-  addresses.
+  In the Guide, under **Phone & tablet**, press **Let my devices in**. Mellow
+  starts listening on your Wi-Fi (and [Tailscale](https://tailscale.com), to
+  reach it away from home) and shows the address to open. Restart Mellow, open
+  the address on the phone, sign in with your Mellow account, and Add to Home
+  Screen.
 - **Stuck?** `README.md` explains every part in detail.

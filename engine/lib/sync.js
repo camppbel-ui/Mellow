@@ -509,8 +509,8 @@ let running = null;
 function syncAll(log = () => {}) {
   if (running) return running;
   running = (async () => {
-    const client = oauth.loadClient();
-    if (!client || client.error) return { skipped: 'no client' };
+    // Each account refreshes with the client it signed in with; any usable client at all will do here.
+    if (!oauth.allClients().length) return { skipped: 'no client' };
 
     const accounts = loadAccounts();
     const settings = loadSettings();

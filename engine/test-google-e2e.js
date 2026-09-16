@@ -96,15 +96,22 @@ const events = [
     start: { dateTime: inDays(1, 15).toISOString() }, end: { dateTime: inDays(1, 16).toISOString() } },
 ];
 
-const seen = { tokenCalls: 0, apiCalls: 0, lastAuth: '' };
+const seen = { tokenCalls: 0, apiCalls: 0, lastAuth: '', tokenClients: [] };
 
 const mock = http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x');
   const json = (o, code = 200) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(o)); };
 
   if (u.pathname === '/token') {
-    seen.tokenCalls++;
-    return json({ access_token: 'fake-access', refresh_token: 'fake-refresh', expires_in: 3600, scope: 'x' });
+    let body = '';
+    req.on('data', (c) => (body += c));
+    req.on('end', () => {
+      seen.tokenCalls++;
+      const form = new URLSearchParams(body);
+      seen.tokenClients.push(`${form.get('grant_type')}:${form.get('client_id')}`);
+      json({ access_token: 'fake-access', refresh_token: 'fake-refresh', expires_in: 3600, scope: 'x' });
+    });
+    return undefined;
   }
 
   seen.apiCalls++;
@@ -127,12 +134,12 @@ const mock = http.createServer((req, res) => {
 
 /* --------------------------------- helpers -------------------------------- */
 
-function request(method, route, body) {
+function request(method, route, body, extraHeaders = {}) {
   return new Promise((resolve) => {
     const data = body ? JSON.stringify(body) : '';
     const req = http.request({
       host: '127.0.0.1', port: ENGINE_PORT, path: route, method,
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data), ...extraHeaders },
     }, (res) => {
       let out = '';
       res.on('data', (c) => (out += c));
@@ -150,8 +157,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function copyEngine(dest) {
   // No AI key and no finances: a sync reads billing emails with Claude, and a test must never spend money.
-  const skip = new Set(['google-tokens.json', 'google-accounts.json', 'auto-tasks.json', 'history.json',
-    'engine.log', 'google-cache', 'calendar-cache', 'ai-key.txt', 'ai-usage.json', 'finance.json', 'drops', 'drops.json', 'assistant']);
+  const skip = new Set(['google-tokens.json', 'google-accounts.json', 'auto-tasks.json', 'history.json', 'account.json',
+    'google-shared-client.json', 'engine.log', 'app.log', 'google-cache', 'calendar-cache', 'ai-key.txt', 'ai-usage.json',
+    'finance.json', 'grades.json', 'drops', 'drops.json', 'assistant']);
   fs.mkdirSync(dest, { recursive: true });
   for (const name of fs.readdirSync(__dirname)) {
     if (skip.has(name) || name.startsWith('client_secret') || name.endsWith('.tmp')) continue;
@@ -178,6 +186,8 @@ function copyEngine(dest) {
     env: {
       ...process.env,
       ANTHROPIC_API_KEY: '',
+      // Whatever the folder this test is run from, the copy is what the engine reads and writes.
+      RATCHET_DATA_DIR: dir,
       RATCHET_GOOGLE_TOKEN_URL: `http://127.0.0.1:${MOCK_PORT}/token`,
       RATCHET_GOOGLE_AUTH_URL: `http://127.0.0.1:${MOCK_PORT}/auth`,
       RATCHET_GOOGLE_API_BASE: `http://127.0.0.1:${MOCK_PORT}`,
@@ -226,7 +236,7 @@ function copyEngine(dest) {
     check('a callback with a forged state is refused', bad.status === 400 && /expired/i.test(bad.text));
 
     const denied = await request('GET', `/oauth/callback?error=access_denied&state=${authUrl.searchParams.get('state')}`);
-    check('a declined consent says so plainly', denied.status === 400 && /declined/i.test(denied.text));
+    check('a declined consent says so plainly, and how to publish the app', denied.status === 400 && /Nothing was connected/.test(denied.text) && /Publish app/.test(denied.text));
 
     r = await request('POST', '/api/google/connect', { role: 'school' });
     const state2 = new URL(r.json.url).searchParams.get('state');
@@ -236,6 +246,8 @@ function copyEngine(dest) {
 
     const replay = await request('GET', `/oauth/callback?code=goodcode&state=${state2}`);
     check('the same callback cannot be replayed', replay.status === 400);
+    const saved = JSON.parse(fs.readFileSync(path.join(dir, 'google-tokens.json'), 'utf8'))[ME];
+    check('the sign-in remembers which client issued it', saved && saved.client_id === '123-abc.apps.googleusercontent.com');
 
     console.log('\nSyncing');
     r = await request('POST', '/api/google/sync', {});
@@ -269,6 +281,66 @@ function copyEngine(dest) {
     check('homework deadlines appear on their day', all.some((i) => i.type === 'deadline' && /Problem Set 3/.test(i.title)));
     check('the calendar starts today and runs fourteen days', cal.days.length === 14);
     check('no token material in the calendar either', !JSON.stringify(cal).includes('fake-'));
+
+    console.log('\nChoosing a client file on Accounts');
+    r = await request('POST', '/api/google/client', { json: 'not json' });
+    check('something that isn\'t JSON is refused, saying what to choose', r.status === 400 && /client_secret/.test(r.json.error));
+    r = await request('POST', '/api/google/client', { json: JSON.stringify({ web: { client_id: '9-w.apps.googleusercontent.com', client_secret: 'x' } }) });
+    check('a Web client is refused, saying to make a Desktop app', r.status === 400 && /Desktop app/.test(r.json.error));
+    r = await request('POST', '/api/google/client', { json: JSON.stringify({ installed: { client_id: '../../evil', client_secret: 'x' } }) });
+    check('a client id that isn\'t Google\'s is refused', r.status === 400);
+    // Not a real-looking Google secret on purpose: the friends packager refuses to ship a file that has one.
+    const second = { installed: { client_id: '555666777888-new.apps.googleusercontent.com', project_id: 'mellow-2', client_secret: 'test-secret-two', extra: 'dropped', redirect_uris: ['http://localhost'] } };
+    r = await request('POST', '/api/google/client', { json: JSON.stringify(second) });
+    check('a Desktop client is saved under Google\'s own name', r.status === 200 && fs.existsSync(path.join(dir, 'client_secret_555666777888-new.apps.googleusercontent.com.json')));
+    check('the status says it\'s in use, with its project number and no secret', r.json.status.client.ok && r.json.status.client.projectNumber === '555666777888' && !JSON.stringify(r.json).includes('test-secret-two'));
+    const written = JSON.parse(fs.readFileSync(path.join(dir, 'client_secret_555666777888-new.apps.googleusercontent.com.json'), 'utf8'));
+    check('only a client\'s own fields are written', written.installed.client_id === second.installed.client_id && written.installed.extra === undefined);
+    check('the first client is kept for the account it signed in', fs.existsSync(path.join(dir, 'client_secret_123-abc.apps.googleusercontent.com.json')));
+    r = await request('POST', '/api/google/connect', { role: 'personal' });
+    check('new sign-ins use the newest client', new URL(r.json.url).searchParams.get('client_id') === '555666777888-new.apps.googleusercontent.com');
+    // Make the saved access token stale, so the next sync has to refresh it.
+    const tk = JSON.parse(fs.readFileSync(path.join(dir, 'google-tokens.json'), 'utf8'));
+    tk[ME].expires_at = Date.now() - 1000;
+    fs.writeFileSync(path.join(dir, 'google-tokens.json'), JSON.stringify(tk));
+    seen.tokenClients = [];
+    await request('POST', '/api/google/sync', {});
+    check('an existing account refreshes with the client that signed it in', seen.tokenClients.includes('refresh_token:123-abc.apps.googleusercontent.com') && !seen.tokenClients.some((c) => c.includes('555666777888')));
+    st = await request('GET', '/api/google/status');
+    check('and keeps syncing without a reconnect', st.json.accounts[0] && !st.json.accounts[0].needsReconnect && !st.json.accounts[0].lastError);
+    r = await request('POST', '/api/drops', { name: 'client_secret_x.json', data: Buffer.from(JSON.stringify(second)).toString('base64'), section: 'files' });
+    check('a client file dropped on Files is turned away, never read', r.status === 400 && /Accounts/.test(r.json.error));
+
+    console.log('\nA shared client that comes with Mellow');
+    for (const f of fs.readdirSync(dir)) if (/^client_secret/.test(f)) fs.renameSync(path.join(dir, f), path.join(dir, `${f}.aside`));
+    fs.writeFileSync(path.join(dir, 'google-shared-client.json'), JSON.stringify({ installed: { client_id: '999000111222-shared.apps.googleusercontent.com', client_secret: 'test-secret-shared' } }));
+    st = await request('GET', '/api/google/status');
+    check('with no client of your own, the shared one is used', st.json.client.ok && st.json.client.shared === true && st.json.client.projectNumber === null);
+    r = await request('POST', '/api/google/connect', { role: 'personal' });
+    check('and connecting works straight away', r.status === 200 && new URL(r.json.url).searchParams.get('client_id') === '999000111222-shared.apps.googleusercontent.com');
+    for (const f of fs.readdirSync(dir)) if (f.endsWith('.aside')) fs.renameSync(path.join(dir, f), path.join(dir, f.replace(/\.aside$/, '')));
+    st = await request('GET', '/api/google/status');
+    check('your own client wins when both are there', st.json.client.ok && st.json.client.shared === false);
+
+    console.log('\nLetting a phone in, and restarting');
+    fs.writeFileSync(path.join(dir, 'engine-config.json'), '{\n  "_comment": "kept",\n  "port": ' + ENGINE_PORT + ',\n  "bindHost": "127.0.0.1",\n  "_bindHost_note": "kept too",\n  "token": "not-needed-from-loopback",\n  "passesPerWeek": 2\n}\n');
+    r = await request('POST', '/api/setup/phone', { open: true });
+    const cfgText = fs.readFileSync(path.join(dir, 'engine-config.json'), 'utf8');
+    if (r.status === 200) {
+      const cfgNow = JSON.parse(cfgText);
+      check('the addresses are saved to engine-config.json', [].concat(cfgNow.bindHost).every((h) => /^(10|172|192|100)\./.test(h)) && [].concat(cfgNow.bindHost).length === r.json.addresses.length);
+      check('the notes in the file survive', cfgNow._comment === 'kept' && cfgNow._bindHost_note === 'kept too');
+      check('an existing token is kept, never replaced', cfgNow.token === 'not-needed-from-loopback' && r.json.token === 'not-needed-from-loopback');
+      check('the Guide hears a restart is needed', JSON.stringify(r.json.setup.pendingBindHosts) === JSON.stringify(r.json.addresses));
+    } else {
+      check('with no Wi-Fi or Tailscale address, it says what to do', r.status === 400 && /Wi-Fi|Tailscale/.test(r.json.error) && /"bindHost": "127\.0\.0\.1"/.test(cfgText));
+    }
+    r = await request('POST', '/api/setup/phone', { open: false });
+    check('shutting other devices out puts back localhost only', r.status === 200 && JSON.parse(fs.readFileSync(path.join(dir, 'engine-config.json'), 'utf8')).bindHost === '127.0.0.1');
+    r = await request('POST', '/api/setup/phone', { open: true }, { 'Sec-Fetch-Site': 'cross-site' });
+    check('another website can\'t open Mellow up', r.status === 403);
+    r = await request('POST', '/api/app/restart', {});
+    check('restarting without a launcher says to reopen instead', r.status === 400 && /open it again/.test(r.json.error));
 
     console.log('\nDeciding about what was captured');
     r = await request('POST', '/api/auto/confirm', { key: pset.id });
